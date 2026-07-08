@@ -56,7 +56,7 @@ def transcribe_audio(path: str) -> str:
 @app.get("/", response_class=HTMLResponse)
 def index():
     with open(os.path.join(HERE, "static", "index.html"), encoding="utf-8") as f:
-        return f.read()
+        return HTMLResponse(f.read(), headers={"Cache-Control": "no-store"})
 
 
 @app.post("/transcribe")

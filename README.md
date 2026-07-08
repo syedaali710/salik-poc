@@ -37,7 +37,8 @@ python -m uvicorn app:app --port 8000
 |------|------|
 | `app.py` | Backend server. Endpoints: `/transcribe` (mic→Whisper), `/parse`, `/generate` (→.pptx) |
 | `parsing.py` | Turns the transcript into slide fields (company, period, KPIs, commentary) |
-| `pptx_builder.py` | Builds the SALIC-branded slide with python-pptx |
+| `pptx_builder.py` | Builds the slide with python-pptx, using the official SALIC template as its base |
+| `assets/SALIC_template.pptx` | Official SALIC PowerPoint template — supplies the real theme, logo, and layout |
 | `static/index.html` | The web page: mic recorder, editable fields, live slide preview |
 | `START_HERE.command` | One-click launcher for macOS |
 

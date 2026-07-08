@@ -1,0 +1,292 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>SALIC — Voice → Slide (local)</title>
+<style>
+:root{
+  --navy:#0B4D89; --sky:#339BD6; --green:#2A7C62; --lightgreen:#A4D5AD;
+  --lightblue:#EBF5FB; --darknavy:#08305C; --red:#D93F40;
+  --supportgreen:#E4F2E6; --ink:#1c2b36; --muted:#6b7c88; --line:#e3e9ef;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:"Segoe UI",Tahoma,Arial,sans-serif;color:var(--ink);background:#f2f5f8}
+header.app{background:var(--darknavy);color:#fff;padding:14px 22px;display:flex;align-items:center;gap:16px}
+header.app img{height:34px;background:#fff;border-radius:6px;padding:4px 8px}
+header.app .t{font-weight:600;font-size:17px}
+header.app .s{font-size:12px;opacity:.85;margin-left:auto;text-align:right}
+.wrap{display:grid;grid-template-columns:410px 1fr;gap:18px;padding:18px;max-width:1400px;margin:0 auto}
+@media(max-width:980px){.wrap{grid-template-columns:1fr}}
+.panel{background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px;box-shadow:0 1px 3px rgba(10,40,70,.05)}
+.panel h2{margin:0 0 10px;font-size:14px;color:var(--navy);text-transform:uppercase;letter-spacing:.5px}
+.micbtn{width:100%;border:none;border-radius:10px;padding:14px;font-size:15px;font-weight:600;color:#fff;background:var(--green);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px}
+.micbtn.rec{background:var(--red);animation:pulse 1.2s infinite}
+.micbtn:disabled{opacity:.6;cursor:default;animation:none}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(217,63,64,.5)}70%{box-shadow:0 0 0 12px rgba(217,63,64,0)}100%{box-shadow:0 0 0 0 rgba(217,63,64,0)}}
+.status{font-size:12px;color:var(--muted);margin:8px 0 4px;min-height:16px}
+textarea,input{font-family:inherit;font-size:13px;color:var(--ink)}
+textarea{width:100%;min-height:88px;border:1px solid var(--line);border-radius:8px;padding:9px;resize:vertical}
+.small{font-size:12px;color:var(--muted)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.chip{font-size:11px;background:var(--lightblue);color:var(--navy);border:1px solid #cfe3f2;border-radius:20px;padding:4px 9px;cursor:pointer}
+.chip:hover{background:var(--sky);color:#fff}
+.fld label{display:block;font-size:11px;color:var(--muted);margin-bottom:3px;font-weight:600}
+.fld input{width:100%;border:1px solid var(--line);border-radius:7px;padding:7px}
+.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
+.kpiblock{border:1px solid var(--line);border-radius:8px;padding:8px;margin-bottom:8px}
+.kpiblock .h{font-size:12px;font-weight:700;color:var(--navy);margin-bottom:6px}
+.actions{display:flex;gap:8px;margin-top:12px}
+.btn{flex:1;border:none;border-radius:9px;padding:11px;font-weight:600;font-size:13px;cursor:pointer}
+.btn.primary{background:var(--navy);color:#fff}
+.btn.ghost{background:#fff;color:var(--navy);border:1px solid var(--navy)}
+.note{margin-top:12px;background:var(--supportgreen);border:1px solid var(--lightgreen);border-radius:8px;padding:10px;font-size:11.5px;color:#245}
+.note b{color:var(--green)}
+.badge{display:inline-block;background:var(--supportgreen);color:var(--green);border-radius:5px;font-size:11px;padding:2px 7px;font-weight:600}
+
+/* SLIDE */
+.slidewrap{display:flex;flex-direction:column;align-items:center;gap:10px}
+.slide{width:100%;max-width:900px;aspect-ratio:16/9;background:#fff;border:1px solid var(--line);border-radius:8px;box-shadow:0 6px 24px rgba(10,40,70,.12);position:relative;overflow:hidden;padding:3.4% 4%}
+.slide .side{position:absolute;left:0;top:0;bottom:0;width:6px;background:linear-gradient(var(--navy),var(--green))}
+.s-top{display:flex;align-items:flex-start;justify-content:space-between}
+.s-top img{height:5.5%;min-height:26px}
+.s-period{font-size:1.15vw;color:var(--muted);text-align:right}
+@media(max-width:980px){.s-period{font-size:11px}}
+.s-title{font-size:2.1vw;font-weight:700;color:var(--navy);margin:1.2% 0 0}
+@media(max-width:980px){.s-title{font-size:20px}}
+.s-underline{height:3px;width:64px;background:var(--green);margin:.6% 0 1%}
+.s-sub{font-size:1vw;color:var(--muted);font-style:italic;margin-bottom:1.4%}
+@media(max-width:980px){.s-sub{font-size:10px}}
+.kcards{display:grid;grid-template-columns:1fr 1fr 1fr;gap:2%;margin-bottom:1.6%}
+.kcard{background:var(--lightblue);border:1px solid #d6e8f5;border-radius:7px;padding:1.4% 1.6%}
+.kcard .l{font-size:.95vw;color:var(--navy);font-weight:600;text-transform:uppercase;letter-spacing:.3px}
+.kcard .v{font-size:2vw;font-weight:800;color:var(--darknavy);line-height:1.1}
+.kcard .d{font-size:.8vw;color:var(--muted)}
+@media(max-width:980px){.kcard .l{font-size:9px}.kcard .v{font-size:18px}.kcard .d{font-size:8px}}
+.grid2{display:grid;grid-template-columns:1.15fr 1fr;gap:3%}
+table.fin{width:100%;border-collapse:collapse;font-size:.92vw}
+@media(max-width:980px){table.fin{font-size:9px}}
+table.fin th{background:var(--navy);color:#fff;font-weight:600;padding:.5% .6%;text-align:right}
+table.fin th:first-child{text-align:left}
+table.fin td{padding:.5% .6%;border-bottom:1px solid var(--line);text-align:right}
+table.fin td:first-child{text-align:left;font-weight:600;color:var(--navy)}
+table.fin tr:nth-child(even) td{background:#f7fafc}
+.pos{color:var(--green);font-weight:700}.neg{color:var(--red);font-weight:700}
+.comm .ch{font-size:1vw;font-weight:700;color:var(--green);margin-bottom:.4%}
+@media(max-width:980px){.comm .ch{font-size:10px}}
+.comm ul{margin:.3% 0 0;padding-left:4%}
+.comm li{font-size:.9vw;color:var(--ink);margin-bottom:.5%;line-height:1.35}
+@media(max-width:980px){.comm li{font-size:9px}}
+.s-foot{position:absolute;left:0;right:0;bottom:0;height:3.2%;background:var(--darknavy);display:flex;align-items:center;justify-content:space-between;padding:0 4%;color:#fff;font-size:.72vw}
+@media(max-width:980px){.s-foot{font-size:7px}}
+</style>
+</head>
+<body>
+<header class="app">
+  <img id="hdrlogo" alt="SALIC"/>
+  <div>
+    <div class="t">Voice → Slide &nbsp;•&nbsp; Local build</div>
+    <div class="small" style="color:#bcd">Mic → Whisper (on this machine) → SALIC slide. Nothing leaves your computer.</div>
+  </div>
+  <div class="s">backend: <b>local Whisper</b><br/>runs at localhost</div>
+</header>
+
+<div class="wrap">
+  <div class="panel">
+    <h2>1 · Record your update</h2>
+    <button id="mic" class="micbtn">🎤 Start recording</button>
+    <div class="status" id="status">Click the mic and allow microphone access.</div>
+    <textarea id="transcript" placeholder="Transcribed text appears here — you can also type / edit."></textarea>
+    <div class="actions" style="margin-top:8px">
+      <button class="btn ghost" id="reparse">↻ Re-read text → fields</button>
+    </div>
+
+    <div class="small" style="margin-top:10px">No mic yet? Load a sample to try the slide:</div>
+    <div class="chips" id="samples"></div>
+
+    <h2 style="margin-top:14px">2 · Slide data <span class="badge">editable</span></h2>
+    <div class="row3">
+      <div class="fld"><label>Company</label><input id="f_company"/></div>
+      <div class="fld"><label>Period</label><input id="f_period"/></div>
+      <div class="fld"><label>Unit</label><input id="f_unit" value="SAR m"/></div>
+    </div>
+    <div id="kpis" style="margin-top:9px"></div>
+    <div class="fld"><label>Commentary (one point per line)</label>
+      <textarea id="f_comm" style="min-height:66px"></textarea></div>
+
+    <div class="actions">
+      <button class="btn ghost" id="rebuild">↻ Build slide</button>
+      <button class="btn primary" id="download">⬇ Download PowerPoint</button>
+    </div>
+
+    <div class="note">
+      <b>Production path:</b> this backend runs Whisper locally. Swap the one
+      <code>transcribe_audio()</code> function to call <b>Azure Whisper</b> in your tenant,
+      and feed the KPI numbers from <b>Microsoft Fabric / Power BI</b> instead of the transcript —
+      the rest is unchanged. Tip: for best parsing, say figures as digits (“two-fifty” → say “250”).
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Live SALIC slide</h2>
+    <div class="slidewrap">
+      <div class="slide" id="slide">
+        <div class="side"></div>
+        <div class="s-top"><img id="slidelogo" alt="SALIC"/><div class="s-period" id="p_period"></div></div>
+        <div class="s-title" id="p_title">Company — Performance Summary</div>
+        <div class="s-underline"></div>
+        <div class="s-sub" id="p_sub">All figures in Million SAR unless stated</div>
+        <div class="kcards" id="p_kcards"></div>
+        <div class="grid2">
+          <div><table class="fin" id="p_table"></table></div>
+          <div class="comm"><div class="ch" id="p_commhead">Performance</div><ul id="p_comm"></ul></div>
+        </div>
+        <div class="s-foot"><span>Saudi Agricultural and Livestock Investment Company</span><span id="p_foot"></span></div>
+      </div>
+      <div class="small">Preview is live. “Download PowerPoint” asks the backend to build the real editable .pptx.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+const LOGO="data:image/png;base64,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";
+document.getElementById('hdrlogo').src=LOGO;
+document.getElementById('slidelogo').src=LOGO;
+
+const SAMPLES=[
+ {name:"NADEC",text:"Performance summary for NADEC, Q1 2025. Revenue was 1,180 million against a budget of 1,150 and 1,000 last year. EBITDA came in at 210 versus a budget of 205 and 180 prior year. Net income was 95 against budget of 90 and 78 last year. Revenue grew almost 18 percent year on year driven by the agri and protein segments. The in-house slaughterhouse investment is on track and expected to improve margins."},
+ {name:"NAQUA",text:"Performance summary for NAQUA, first quarter 2025. Revenue reached 250 million versus budget of 264 and 210 last year. EBITDA was 4 million against a budget of 20. Net income was negative 57 million. NAQUA remains the largest seafood producer in the MENA region and targets to become the world's number one shrimp producer by 2030."},
+ {name:"SABIL",text:"SABIL performance summary for Q1 2025. Revenue was 320 million against a budget of 375. EBITDA came in at 140 versus budget of 76. Net income was 60 million. Operations went live in February 2025, one month later than planned. Cost optimisation drove EBITDA well above the investment case."}
+];
+const KPIDEFS=[["rev","Revenue"],["ebitda","EBITDA"],["ni","Net Income"]];
+
+function buildKpiInputs(){
+  const host=document.getElementById('kpis');host.innerHTML="";
+  KPIDEFS.forEach(([id,label])=>{
+    const b=document.createElement('div');b.className="kpiblock";
+    b.innerHTML=`<div class="h">${label} <span class="small" style="font-weight:400">(Actual / Budget / Prior yr)</span></div>
+      <div class="row3">
+        <div class="fld"><input id="k_${id}_a" placeholder="Actual"/></div>
+        <div class="fld"><input id="k_${id}_b" placeholder="Budget"/></div>
+        <div class="fld"><input id="k_${id}_p" placeholder="Prior yr"/></div>
+      </div>`;
+    host.appendChild(b);
+  });
+}
+buildKpiInputs();
+
+function applyData(d){
+  document.getElementById('f_company').value=d.company||"";
+  document.getElementById('f_period').value=d.period||"";
+  document.getElementById('f_unit').value=d.unit||"SAR m";
+  document.getElementById('f_comm').value=(d.comm||[]).join("\n");
+  KPIDEFS.forEach(([id])=>{
+    const k=(d.kpis&&d.kpis[id])||{};
+    document.getElementById(`k_${id}_a`).value=k.actual??"";
+    document.getElementById(`k_${id}_b`).value=k.budget??"";
+    document.getElementById(`k_${id}_p`).value=k.py??"";
+  });
+}
+function gatherData(){
+  const g=x=>{const v=document.getElementById(x).value.trim();return v===""?null:parseFloat(v.replace(/,/g,''));};
+  const d={company:document.getElementById('f_company').value.trim()||"Company",
+    period:document.getElementById('f_period').value.trim(),
+    unit:document.getElementById('f_unit').value.trim()||"SAR m",
+    kpis:{}, comm:document.getElementById('f_comm').value.split("\n").map(s=>s.trim()).filter(Boolean)};
+  KPIDEFS.forEach(([id])=>{d.kpis[id]={actual:g(`k_${id}_a`),budget:g(`k_${id}_b`),py:g(`k_${id}_p`)};});
+  return d;
+}
+function fmt(n){if(n===null||n===undefined||n==="")return "—";const neg=n<0;n=Math.abs(n);let s=n>=100?Math.round(n).toLocaleString():n.toLocaleString(undefined,{maximumFractionDigits:1});return (neg?"(":"")+s+(neg?")":"");}
+function varCell(a,b){if(a===null||b===null)return '<td>—</td>';const diff=a-b;return `<td class="${diff>=0?'pos':'neg'}">${diff>=0?'▲':'▼'} ${fmt(Math.abs(diff))}</td>`;}
+
+function render(){
+  const d=gatherData();
+  document.getElementById('p_title').textContent=(d.company||"Company")+" — Performance Summary";
+  document.getElementById('p_period').textContent=d.period||"";
+  document.getElementById('p_sub').textContent="All figures in Million "+(d.unit.replace(/m$/i,'').trim()||"SAR")+" unless stated";
+  document.getElementById('p_foot').textContent=(d.period? d.period+" · ":"")+"Finance Update";
+  document.getElementById('p_commhead').textContent=(d.period? d.period+" Performance":"Performance");
+  const kc=document.getElementById('p_kcards');kc.innerHTML="";
+  KPIDEFS.forEach(([id,label])=>{const k=d.kpis[id];const sub=[];if(k.budget!==null)sub.push("Budget "+fmt(k.budget));if(k.py!==null)sub.push("PY "+fmt(k.py));
+    kc.innerHTML+=`<div class="kcard"><div class="l">${label}</div><div class="v">${fmt(k.actual)}</div><div class="d">${sub.join(" · ")||d.unit}</div></div>`;});
+  let t=`<tr><th>${d.unit}</th><th>Prior Yr</th><th>Budget</th><th>Actual</th><th>Var vs B</th></tr>`;
+  KPIDEFS.forEach(([id,label])=>{const k=d.kpis[id];t+=`<tr><td>${label}</td><td>${fmt(k.py)}</td><td>${fmt(k.budget)}</td><td>${fmt(k.actual)}</td>${varCell(k.actual,k.budget)}</tr>`;});
+  document.getElementById('p_table').innerHTML=t;
+  const ul=document.getElementById('p_comm');ul.innerHTML="";
+  d.comm.slice(0,5).forEach(c=>{const li=document.createElement('li');li.textContent=c;ul.appendChild(li);});
+  return d;
+}
+
+// samples
+const sc=document.getElementById('samples');
+SAMPLES.forEach(s=>{const c=document.createElement('span');c.className="chip";c.textContent="▶ "+s.name;
+  c.onclick=async()=>{document.getElementById('transcript').value=s.text;await reparse();};sc.appendChild(c);});
+
+// server parse of the current transcript text
+async function reparse(){
+  const text=document.getElementById('transcript').value;
+  try{
+    const r=await fetch('/parse',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text})});
+    const j=await r.json();applyData(j.data);render();
+  }catch(e){setStatus("Parse failed: "+e.message);}
+}
+document.getElementById('reparse').onclick=reparse;
+document.getElementById('rebuild').onclick=render;
+
+function setStatus(t){document.getElementById('status').textContent=t;}
+
+// ---- mic recording -> /transcribe ----
+let mediaRecorder=null, chunks=[], stream=null, recording=false;
+const micBtn=document.getElementById('mic');
+async function startRec(){
+  try{ stream=await navigator.mediaDevices.getUserMedia({audio:true}); }
+  catch(e){ setStatus("Microphone blocked: "+e.message); return; }
+  chunks=[];
+  const mime = MediaRecorder.isTypeSupported('audio/webm')?'audio/webm':'';
+  mediaRecorder=new MediaRecorder(stream, mime?{mimeType:mime}:undefined);
+  mediaRecorder.ondataavailable=e=>{ if(e.data.size>0) chunks.push(e.data); };
+  mediaRecorder.onstop=onStop;
+  mediaRecorder.start();
+  recording=true;
+  micBtn.classList.add('rec');micBtn.textContent="⏹ Stop & transcribe";
+  setStatus("🔴 Recording… speak your update, then press stop.");
+}
+async function onStop(){
+  const blob=new Blob(chunks,{type:'audio/webm'});
+  if(stream) stream.getTracks().forEach(t=>t.stop());
+  micBtn.disabled=true;micBtn.textContent="⏳ Transcribing…";
+  setStatus("Transcribing on this machine… (first time, the model downloads — up to a minute).");
+  try{
+    const fd=new FormData();fd.append('audio',blob,'mic.webm');
+    const r=await fetch('/transcribe',{method:'POST',body:fd});
+    if(!r.ok) throw new Error("server "+r.status);
+    const j=await r.json();
+    document.getElementById('transcript').value=j.transcript||"";
+    applyData(j.data);render();
+    setStatus(j.transcript? "Done — edit any field, then Build slide / Download.":"No speech detected — try again or type it in.");
+  }catch(e){ setStatus("Transcription failed: "+e.message+" (is the server running?)"); }
+  micBtn.disabled=false;micBtn.classList.remove('rec');micBtn.textContent="🎤 Start recording";
+}
+micBtn.onclick=()=>{ recording? (recording=false, mediaRecorder.stop()) : startRec(); };
+
+// ---- download pptx from backend ----
+document.getElementById('download').onclick=async()=>{
+  const d=render();
+  setStatus("Building PowerPoint…");
+  try{
+    const r=await fetch('/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)});
+    if(!r.ok) throw new Error("server "+r.status);
+    const blob=await r.blob();
+    const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+    a.download=(d.company||"SALIC").replace(/\s+/g,'_')+"_Performance_Summary.pptx";
+    document.body.appendChild(a);a.click();a.remove();
+    setStatus("PowerPoint downloaded.");
+  }catch(e){ setStatus("Generate failed: "+e.message); }
+};
+
+// init with a sample so the slide isn't empty
+document.getElementById('transcript').value=SAMPLES[0].text;
+reparse();
+</script>
+</body>
+</html>

@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: salic-ai-insights
+    env: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    envVars:
+      - key: ANTHROPIC_API_KEY
+        sync: false

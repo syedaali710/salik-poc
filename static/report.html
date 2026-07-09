@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>SALIC — AI Insights Chat</title>
+<style>
+:root{
+  --navy:#0B4D89; --sky:#339BD6; --green:#2A7C62; --lightgreen:#A4D5AD;
+  --lightblue:#EBF5FB; --darknavy:#08305C; --red:#D93F40;
+  --supportgreen:#E4F2E6; --ink:#1c2b36; --muted:#6b7c88; --line:#e3e9ef;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:"Segoe UI",Tahoma,Arial,sans-serif;color:var(--ink);background:#f2f5f8}
+header.app{background:var(--darknavy);color:#fff;padding:14px 22px;display:flex;align-items:center;gap:16px}
+header.app img{height:34px;background:#fff;border-radius:6px;padding:4px 8px}
+header.app .t{font-weight:600;font-size:17px}
+header.app .s{font-size:12px;opacity:.85;margin-left:auto;text-align:right}
+header.app nav{margin-left:16px}
+header.app nav a{color:#cfe0ef;font-size:13px;text-decoration:none;margin-right:14px}
+header.app nav a.active{color:#fff;font-weight:600;text-decoration:underline}
+
+.wrap{display:grid;grid-template-columns:1fr 360px;gap:18px;padding:18px;max-width:1400px;margin:0 auto}
+@media(max-width:980px){.wrap{grid-template-columns:1fr}}
+.panel{background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px;box-shadow:0 1px 3px rgba(10,40,70,.05)}
+.panel h2{margin:0 0 10px;font-size:14px;color:var(--navy);text-transform:uppercase;letter-spacing:.5px}
+
+/* ---- ask bar ---- */
+.askbar{display:flex;gap:8px}
+.askbar input{flex:1;border:1px solid var(--line);border-radius:10px;padding:12px 14px;font-size:14px}
+.askbar button{border:none;border-radius:10px;padding:12px 20px;font-weight:600;font-size:14px;background:var(--navy);color:#fff;cursor:pointer;white-space:nowrap}
+.askbar button:disabled{opacity:.6;cursor:default}
+.suggest{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.suggest span{font-size:11.5px;background:var(--lightblue);color:var(--navy);border:1px solid #cfe3f2;border-radius:20px;padding:5px 10px;cursor:pointer}
+.suggest span:hover{background:var(--sky);color:#fff}
+
+/* ---- chat transcript ---- */
+.chat{margin-top:16px;display:flex;flex-direction:column;gap:14px}
+.msg{border-radius:10px;padding:12px 14px}
+.msg.user{background:var(--lightblue);align-self:flex-end;max-width:75%;font-size:14px}
+.msg.ai{background:#fff;border:1px solid var(--line)}
+.msg.ai .ans{font-size:14.5px;line-height:1.5;white-space:pre-wrap}
+.msg.ai .addedtag{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;color:var(--green);margin-top:8px;font-weight:600}
+.msg.err{background:#fdecec;border:1px solid #f3caca;color:#8a2b2b;font-size:13.5px}
+
+/* ---- mini chart / table preview ---- */
+.miniwrap{margin-top:10px;border-top:1px solid var(--line);padding-top:10px}
+.minititle{font-size:12.5px;font-weight:700;color:var(--navy);margin-bottom:2px}
+.miniinsight{font-size:11.5px;color:var(--green);margin-bottom:8px}
+.minichart{display:flex;align-items:flex-end;gap:8px;height:110px;padding:4px 2px}
+.mbar{flex:1;min-width:2px;border-radius:3px 3px 0 0;position:relative;display:flex;flex-direction:column;justify-content:flex-end}
+.mbar .v{font-size:9.5px;color:var(--muted);text-align:center;margin-bottom:2px}
+.mbarwrap{flex:1;display:flex;flex-direction:column;align-items:center}
+.mlabel{font-size:9.5px;color:var(--navy);margin-top:4px;text-align:center;max-width:60px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+table.minitbl{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:4px}
+table.minitbl th{background:var(--navy);color:#fff;text-align:left;padding:6px 8px;font-size:11.5px}
+table.minitbl td{padding:6px 8px;border-bottom:1px solid var(--line)}
+table.minitbl tr:nth-child(even) td{background:#f7fafc}
+
+/* ---- report sidebar ---- */
+.rlist{display:flex;flex-direction:column;gap:8px;margin-top:8px;max-height:420px;overflow:auto}
+.rcard{border:1px solid var(--line);border-radius:8px;padding:9px 10px;font-size:12.5px}
+.rcard .rt{display:flex;justify-content:space-between;align-items:center;gap:6px}
+.rcard .badge{font-size:10px;background:var(--supportgreen);color:var(--green);border-radius:5px;padding:2px 6px;font-weight:700;text-transform:uppercase}
+.rcard .rm{cursor:pointer;color:var(--red);font-size:12px}
+.rcard .rtxt{color:var(--muted);margin-top:4px;max-height:2.8em;overflow:hidden}
+.empty{font-size:12.5px;color:var(--muted);padding:10px 0}
+.fld{margin-top:10px}
+.fld label{display:block;font-size:11px;color:var(--muted);margin-bottom:3px;font-weight:600}
+.fld input{width:100%;border:1px solid var(--line);border-radius:7px;padding:7px;font-size:13px}
+.btn{width:100%;border:none;border-radius:9px;padding:12px;font-weight:600;font-size:13.5px;cursor:pointer;margin-top:12px}
+.btn.primary{background:var(--navy);color:#fff}
+.btn.primary:disabled{opacity:.6;cursor:default}
+.dlstatus{font-size:12px;color:var(--muted);margin-top:8px;min-height:16px}
+.count{background:var(--sky);color:#fff;border-radius:20px;padding:1px 8px;font-size:11px;margin-left:6px}
+</style>
+</head>
+<body>
+<header class="app">
+  <img id="hdrlogo" alt="SALIC"/>
+  <div>
+    <div class="t">AI Insights Chat</div>
+    <div class="small" style="color:#bcd;font-size:12px">Ask about SALIC's financials — get an answer, a chart or table, and build a downloadable report.</div>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="panel">
+    <h2>Ask a question</h2>
+    <div class="askbar">
+      <input id="q" placeholder="e.g. How did Revenue perform vs budget YTD? What drove the EBITDA bridge by segment?" />
+      <button id="ask">Ask</button>
+    </div>
+    <div class="suggest" id="suggest"></div>
+    <div class="chat" id="chat"></div>
+  </div>
+
+  <div class="panel">
+    <h2>Your report <span class="count" id="rcount">0</span></h2>
+    <div class="fld"><label>Company</label><input id="f_company" value="SALIC"/></div>
+    <div class="fld"><label>Period</label><input id="f_period" value="YTD Dec-2025"/></div>
+    <div class="rlist" id="rlist"><div class="empty">Ask a question and click "Add to report" on any answer to build your deck.</div></div>
+    <button class="btn primary" id="download">⬇ Download PowerPoint report</button>
+    <div class="dlstatus" id="dlstatus"></div>
+  </div>
+</div>
+
+<script>
+const LOGO="data:image/png;base64,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";
+document.getElementById('hdrlogo').src=LOGO;
+
+const HISTORY=[];
+const REPORT=[];
+let asking=false;
+
+const SUGGESTIONS=[
+  "How did Revenue perform vs budget YTD?",
+  "What drove the EBITDA bridge by geography?",
+  "Compare Net Income across portfolio companies",
+  "Summarize all KPIs vs budget and prior year"
+];
+document.getElementById('suggest').innerHTML = SUGGESTIONS.map(s=>`<span>${s}</span>`).join('');
+document.querySelectorAll('.suggest span').forEach(el=>el.onclick=()=>{document.getElementById('q').value=el.textContent;ask();});
+
+function fmt(n){
+  if(n===null||n===undefined||n==="")return "—";
+  const num=Number(n); if(isNaN(num))return String(n);
+  const neg=num<0; const abs=Math.abs(num);
+  const s=abs>=100?Math.round(abs).toLocaleString():abs.toLocaleString(undefined,{maximumFractionDigits:2});
+  return (neg?"(":"")+s+(neg?")":"");
+}
+
+function renderMiniChart(spec){
+  const vals=[];
+  spec.series.forEach(s=>s.values.forEach(v=>{if(v!==null&&v!==undefined)vals.push(Math.abs(v));}));
+  const max=Math.max(...vals,1);
+  const colors=["#0B4D89","#339BD6","#2A7C62","#A4D5AD","#D93F40","#E6AF00"];
+  const bars=spec.categories.map((cat,ci)=>{
+    const segs=spec.series.map((s,si)=>{
+      const v=s.values[ci]; if(v===null||v===undefined)return "";
+      const h=Math.max(Math.abs(v)/max*90,2);
+      return `<div class="mbar" style="height:${h}%;background:${colors[si%colors.length]}"><div class="v">${fmt(v)}</div></div>`;
+    }).join('');
+    return `<div class="mbarwrap"><div style="display:flex;gap:2px;align-items:flex-end;height:100%;width:100%">${segs}</div><div class="mlabel">${cat}</div></div>`;
+  }).join('');
+  const title=spec.title||'';
+  const showUnit=spec.unit && !title.toLowerCase().includes(spec.unit.toLowerCase());
+  return `<div class="miniwrap">
+    <div class="minititle">${title}${showUnit?` (${spec.unit})`:''}</div>
+    ${spec.insight?`<div class="miniinsight">${spec.insight}</div>`:''}
+    <div class="minichart">${bars}</div>
+  </div>`;
+}
+
+function renderMiniTable(t){
+  const head=t.columns.map(c=>`<th>${c}</th>`).join('');
+  const body=t.rows.map(r=>`<tr>${r.map(c=>`<td>${c}</td>`).join('')}</tr>`).join('');
+  return `<div class="miniwrap">
+    <div class="minititle">${t.title||''}</div>
+    <table class="minitbl"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>
+  </div>`;
+}
+
+function addUserMsg(q){
+  const chat=document.getElementById('chat');
+  const d=document.createElement('div'); d.className='msg user'; d.textContent=q;
+  chat.appendChild(d); chat.scrollTop=chat.scrollHeight;
+}
+
+function addAiMsg(result){
+  const chat=document.getElementById('chat');
+  const d=document.createElement('div'); d.className='msg ai';
+  let html=`<div class="ans"></div>`;
+  if(result.chart) html+=renderMiniChart(result.chart);
+  if(result.table) html+=renderMiniTable(result.table);
+  html+=`<div><span class="addedtag" style="display:none">✓ added to report</span></div>`;
+  d.innerHTML=html;
+  d.querySelector('.ans').textContent=result.answer;
+  chat.appendChild(d);
+  chat.scrollTop=chat.scrollHeight;
+
+  // simple flow: every answered question is auto-added to the report
+  addToReport(result);
+  d.querySelector('.addedtag').style.display='inline-flex';
+}
+
+function addErrMsg(text){
+  const chat=document.getElementById('chat');
+  const d=document.createElement('div'); d.className='msg err'; d.textContent=text;
+  chat.appendChild(d); chat.scrollTop=chat.scrollHeight;
+}
+
+function addToReport(result){
+  REPORT.push({type:'narrative', title:'Q&A Insight', text:result.answer});
+  if(result.chart) REPORT.push({type:'chart', spec:result.chart});
+  if(result.table) REPORT.push({type:'table', spec:result.table});
+  renderReportList();
+}
+
+function removeReportItem(i){ REPORT.splice(i,1); renderReportList(); }
+
+function renderReportList(){
+  document.getElementById('rcount').textContent=REPORT.length;
+  const host=document.getElementById('rlist');
+  if(!REPORT.length){ host.innerHTML='<div class="empty">Ask a question and click "Add to report" on any answer to build your deck.</div>'; return; }
+  host.innerHTML=REPORT.map((b,i)=>{
+    const label = b.type==='narrative'?(b.text||'').slice(0,90) : (b.spec&&b.spec.title)||b.type;
+    return `<div class="rcard"><div class="rt"><span class="badge">${b.type}</span><span class="rm" data-i="${i}">✕ remove</span></div><div class="rtxt">${label}</div></div>`;
+  }).join('');
+  host.querySelectorAll('.rm').forEach(el=>el.onclick=()=>removeReportItem(parseInt(el.dataset.i)));
+}
+
+async function ask(){
+  const input=document.getElementById('q');
+  const q=input.value.trim();
+  if(!q||asking)return;
+  asking=true;
+  document.getElementById('ask').disabled=true;
+  addUserMsg(q);
+  input.value='';
+  try{
+    const r=await fetch('/chat',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({question:q, history:HISTORY})});
+    if(!r.ok)throw new Error("server "+r.status);
+    const j=await r.json();
+    HISTORY.push({role:'user',content:q});
+    HISTORY.push({role:'assistant',content:j.answer});
+    addAiMsg(j);
+  }catch(e){
+    addErrMsg("Couldn't get an answer: "+e.message);
+  }
+  asking=false;
+  document.getElementById('ask').disabled=false;
+}
+document.getElementById('ask').onclick=ask;
+document.getElementById('q').addEventListener('keydown',e=>{if(e.key==='Enter')ask();});
+
+async function downloadReport(){
+  if(!REPORT.length){ document.getElementById('dlstatus').textContent="Add at least one answer to the report first."; return; }
+  const btn=document.getElementById('download');
+  btn.disabled=true;
+  document.getElementById('dlstatus').textContent="Building PowerPoint report…";
+  try{
+    const r=await fetch('/export_report',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        company:document.getElementById('f_company').value.trim()||'SALIC',
+        period:document.getElementById('f_period').value.trim(),
+        blocks:REPORT
+      })});
+    if(!r.ok)throw new Error("server "+r.status);
+    const blob=await r.blob();
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a'); a.href=url; a.download='SALIC_AI_Insights_Report.pptx';
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+    document.getElementById('dlstatus').textContent="Downloaded.";
+  }catch(e){
+    document.getElementById('dlstatus').textContent="Export failed: "+e.message;
+  }
+  btn.disabled=false;
+}
+document.getElementById('download').onclick=downloadReport;
+</script>
+</body>
+</html>

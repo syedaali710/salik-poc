@@ -1,0 +1,303 @@
+{
+  "source": "Dashboards All.pdf (SALIC Power BI export) — pages 1-8, Financial Snapshot / Executive Summary, Management View",
+  "as_of": "Dec-2025",
+  "currency_unit": "SAR",
+  "kpis": {
+    "period": "YTD (period ending Dec-2025)",
+    "items": [
+      {"name": "Revenue", "actual": 7480000000, "budget": 25270000000, "py": 2340000000, "vs_budget_pct": -70.40, "vs_py_pct": 219.49},
+      {"name": "Gross Profit", "actual": 908000000, "budget": 1610000000, "py": 649500000, "vs_budget_pct": -43.69, "vs_py_pct": 39.79},
+      {"name": "EBITDA", "actual": 1620000000, "budget": 1490000000, "py": 897800000, "vs_budget_pct": 8.86, "vs_py_pct": 80.45},
+      {"name": "Net Income", "actual": 1250000000, "budget": 657000000, "py": 563600000, "vs_budget_pct": 89.88, "vs_py_pct": 121.34},
+      {"name": "Working Capital", "actual": 1740000000, "budget": 12680000000, "py": 755700000, "py_label": "SMLY", "vs_budget_pct": -86.31, "vs_py_pct": 129.65},
+      {"name": "Net Debt to EBITDA", "actual": 2.05, "budget": 13.58, "py": 1.89, "py_label": "SMLY", "unit": "x", "vs_budget_pct": -84.9, "vs_py_pct": 8.5},
+      {"name": "ROIC", "actual": 5.98, "unit": "%", "budget": null, "py": null}
+    ]
+  },
+  "waterfalls": [
+    {
+      "period": "YTD", "breakdown_by": "Geography", "metric": "Revenue", "total_change_pct": -70.4,
+      "steps": [
+        {"label": "B", "value": 25300000000, "type": "start"},
+        {"label": "Local", "value": -88000000, "type": "decrease"},
+        {"label": "Int'l", "value": -17700000000, "type": "decrease"},
+        {"label": "A", "value": 7500000000, "type": "end"}
+      ]
+    },
+    {
+      "period": "YTD", "breakdown_by": "Geography", "metric": "Gross Profit", "total_change_pct": -43.7,
+      "steps": [
+        {"label": "B", "value": 1600000000, "type": "start"},
+        {"label": "Local", "value": 192700000, "type": "increase"},
+        {"label": "Int'l", "value": -897000000, "type": "decrease"},
+        {"label": "A", "value": 908000000, "type": "end"}
+      ]
+    },
+    {
+      "period": "YTD", "breakdown_by": "Geography", "metric": "EBITDA", "total_change_pct": 8.7,
+      "steps": [
+        {"label": "B", "value": 1500000000, "type": "start"},
+        {"label": "Local", "value": 302400000, "type": "increase"},
+        {"label": "Int'l", "value": -158600000, "type": "decrease"},
+        {"label": "Group Net Cost", "value": -14800000, "type": "decrease"},
+        {"label": "A", "value": 1600000000, "type": "end"}
+      ]
+    },
+    {
+      "period": "YTD", "breakdown_by": "Geography", "metric": "Net Income", "total_change_pct": 89.9,
+      "steps": [
+        {"label": "B", "value": 657000000, "type": "start"},
+        {"label": "Local", "value": 295400000, "type": "increase"},
+        {"label": "Int'l", "value": 293400000, "type": "increase"},
+        {"label": "Group Net Cost", "value": 1700000, "type": "increase"},
+        {"label": "A", "value": 1200000000, "type": "end"}
+      ]
+    },
+    {
+      "period": "YTD", "breakdown_by": "Segment", "metric": "Revenue", "total_change_pct": -70.4,
+      "steps": [
+        {"label": "B", "value": 25300000000, "type": "start"},
+        {"label": "Grains", "value": -17700000000, "type": "decrease"},
+        {"label": "Trading", "value": -38000000, "type": "decrease"},
+        {"label": "Supply Chain", "value": -50000000, "type": "decrease"},
+        {"label": "A", "value": 7500000000, "type": "end"}
+      ]
+    },
+    {
+      "period": "YTD", "breakdown_by": "Segment", "metric": "Gross Profit", "total_change_pct": -43.7,
+      "steps": [
+        {"label": "B", "value": 1600000000, "type": "start"},
+        {"label": "Grains", "value": -897000000, "type": "decrease"},
+        {"label": "Supply Chain", "value": 194700000, "type": "increase"},
+        {"label": "Trading", "value": -2100000, "type": "decrease"},
+        {"label": "A", "value": 908000000, "type": "end"}
+      ]
+    },
+    {
+      "period": "YTD", "breakdown_by": "Segment", "metric": "EBITDA", "total_change_pct": 8.7,
+      "steps": [
+        {"label": "B", "value": 1500000000, "type": "start"},
+        {"label": "Grains", "value": -460600000, "type": "decrease"},
+        {"label": "Animal Protein", "value": 426600000, "type": "increase"},
+        {"label": "Supply Chain", "value": 175600000, "type": "increase"},
+        {"label": "Trading", "value": 2300000, "type": "increase"},
+        {"label": "Diversified Products", "value": -32800, "type": "decrease"},
+        {"label": "Group Net Cost", "value": -14800000, "type": "decrease"},
+        {"label": "A", "value": 1600000000, "type": "end"}
+      ]
+    },
+    {
+      "period": "YTD", "breakdown_by": "Segment", "metric": "Net Income", "total_change_pct": 89.9,
+      "steps": [
+        {"label": "B", "value": 657000000, "type": "start"},
+        {"label": "Animal Protein", "value": 426600000, "type": "increase"},
+        {"label": "Grains", "value": -8600000, "type": "decrease"},
+        {"label": "Supply Chain", "value": 165000000, "type": "increase"},
+        {"label": "Trading", "value": 5800000, "type": "increase"},
+        {"label": "Diversified Products", "value": -32800, "type": "decrease"},
+        {"label": "Group Net Cost", "value": 1700000, "type": "increase"},
+        {"label": "A", "value": 1200000000, "type": "end"}
+      ]
+    },
+    {
+      "period": "YTD", "breakdown_by": "Portfolio Company", "metric": "Revenue", "total_change_pct": -70.4,
+      "steps": [
+        {"label": "B", "value": 25300000000, "type": "start"},
+        {"label": "G3GH", "value": 3600000000, "type": "increase"},
+        {"label": "SALIC Ukraine", "value": 531700000, "type": "increase"},
+        {"label": "UFIC", "value": -38000000, "type": "decrease"},
+        {"label": "SABIL", "value": -50000000, "type": "decrease"},
+        {"label": "Olam Agri", "value": -21800000000, "type": "decrease"},
+        {"label": "SALIC Australia", "value": -37300000, "type": "decrease"},
+        {"label": "A", "value": 7500000000, "type": "end"}
+      ]
+    },
+    {
+      "period": "YTD", "breakdown_by": "Portfolio Company", "metric": "Gross Profit", "total_change_pct": -43.7,
+      "steps": [
+        {"label": "B", "value": 1600000000, "type": "start"},
+        {"label": "SALIC Ukraine", "value": 208000000, "type": "increase"},
+        {"label": "SABIL", "value": 194700000, "type": "increase"},
+        {"label": "G3GH", "value": 69000000, "type": "increase"},
+        {"label": "UFIC", "value": -2100000, "type": "decrease"},
+        {"label": "Olam Agri", "value": -1200000000, "type": "decrease"},
+        {"label": "SALIC Australia", "value": -15200000, "type": "decrease"},
+        {"label": "A", "value": 908000000, "type": "end"}
+      ]
+    },
+    {
+      "period": "YTD", "breakdown_by": "Portfolio Company", "metric": "EBITDA", "total_change_pct": 8.7,
+      "steps": [
+        {"label": "B", "value": 1500000000, "type": "start"},
+        {"label": "Associates", "value": 246200000, "type": "increase"},
+        {"label": "Subsidiary", "value": -382500000, "type": "decrease"},
+        {"label": "Financial Assets", "value": 256800000, "type": "increase"},
+        {"label": "Holdings", "value": 53900000, "type": "increase"},
+        {"label": "Joint Ventures", "value": -30500000, "type": "decrease"},
+        {"label": "Group Net Cost", "value": -14800000, "type": "decrease"},
+        {"label": "A", "value": 1600000000, "type": "end"}
+      ]
+    },
+    {
+      "period": "YTD", "breakdown_by": "Portfolio Company", "metric": "Net Income", "total_change_pct": 89.9,
+      "steps": [
+        {"label": "B", "value": 657000000, "type": "start"},
+        {"label": "Associates", "value": 246200000, "type": "increase"},
+        {"label": "Subsidiary", "value": 80400000, "type": "increase"},
+        {"label": "Financial Assets", "value": 256800000, "type": "increase"},
+        {"label": "Holdings", "value": 36000000, "type": "increase"},
+        {"label": "Joint Ventures", "value": -30500000, "type": "decrease"},
+        {"label": "Group Net Cost", "value": 1700000, "type": "increase"},
+        {"label": "A", "value": 1200000000, "type": "end"}
+      ]
+    },
+    {
+      "period": "LTM", "breakdown_by": "Geography", "metric": "Revenue", "total_change_pct": -70.4,
+      "note": "Same values as YTD Geography view",
+      "steps": [
+        {"label": "B", "value": 25300000000, "type": "start"},
+        {"label": "Local", "value": -88000000, "type": "decrease"},
+        {"label": "Int'l", "value": -17700000000, "type": "decrease"},
+        {"label": "A", "value": 7500000000, "type": "end"}
+      ]
+    },
+    {
+      "period": "LTM", "breakdown_by": "Geography", "metric": "Gross Profit", "total_change_pct": -43.7,
+      "note": "Same values as YTD Geography view",
+      "steps": [
+        {"label": "B", "value": 1600000000, "type": "start"},
+        {"label": "Local", "value": 192700000, "type": "increase"},
+        {"label": "Int'l", "value": -897000000, "type": "decrease"},
+        {"label": "A", "value": 908000000, "type": "end"}
+      ]
+    },
+    {
+      "period": "LTM", "breakdown_by": "Geography", "metric": "EBITDA", "total_change_pct": 8.7,
+      "note": "Same values as YTD Geography view",
+      "steps": [
+        {"label": "B", "value": 1500000000, "type": "start"},
+        {"label": "Local", "value": 302400000, "type": "increase"},
+        {"label": "Int'l", "value": -158600000, "type": "decrease"},
+        {"label": "Group Net Cost", "value": -14800000, "type": "decrease"},
+        {"label": "A", "value": 1600000000, "type": "end"}
+      ]
+    },
+    {
+      "period": "LTM", "breakdown_by": "Geography", "metric": "Net Income", "total_change_pct": 89.9,
+      "note": "Same values as YTD Geography view",
+      "steps": [
+        {"label": "B", "value": 657000000, "type": "start"},
+        {"label": "Local", "value": 295400000, "type": "increase"},
+        {"label": "Int'l", "value": 293400000, "type": "increase"},
+        {"label": "Group Net Cost", "value": 1700000, "type": "increase"},
+        {"label": "A", "value": 1200000000, "type": "end"}
+      ]
+    },
+    {
+      "period": "LTM", "breakdown_by": "Segment", "metric": "Revenue", "total_change_pct": -70.4,
+      "note": "Matches YTD Segment values",
+      "steps": [
+        {"label": "B", "value": 25300000000, "type": "start"},
+        {"label": "Grains", "value": -17700000000, "type": "decrease"},
+        {"label": "Trading", "value": -38000000, "type": "decrease"},
+        {"label": "Supply Chain", "value": -50000000, "type": "decrease"},
+        {"label": "A", "value": 7500000000, "type": "end"}
+      ]
+    },
+    {
+      "period": "LTM", "breakdown_by": "Segment", "metric": "Gross Profit", "total_change_pct": -43.7,
+      "note": "Matches YTD Segment values",
+      "steps": [
+        {"label": "B", "value": 1600000000, "type": "start"},
+        {"label": "Grains", "value": -897000000, "type": "decrease"},
+        {"label": "Supply Chain", "value": 194700000, "type": "increase"},
+        {"label": "Trading", "value": -2100000, "type": "decrease"},
+        {"label": "A", "value": 908000000, "type": "end"}
+      ]
+    },
+    {
+      "period": "LTM", "breakdown_by": "Segment", "metric": "EBITDA", "total_change_pct": 8.7,
+      "note": "Matches YTD Segment values",
+      "steps": [
+        {"label": "B", "value": 1500000000, "type": "start"},
+        {"label": "Grains", "value": -460600000, "type": "decrease"},
+        {"label": "Animal Protein", "value": 426600000, "type": "increase"},
+        {"label": "Supply Chain", "value": 175600000, "type": "increase"},
+        {"label": "Trading", "value": 2300000, "type": "increase"},
+        {"label": "Diversified Products", "value": -32800, "type": "decrease"},
+        {"label": "Group Net Cost", "value": -14800000, "type": "decrease"},
+        {"label": "A", "value": 1600000000, "type": "end"}
+      ]
+    },
+    {
+      "period": "LTM", "breakdown_by": "Segment", "metric": "Net Income", "total_change_pct": 89.9,
+      "note": "Matches YTD Segment values",
+      "steps": [
+        {"label": "B", "value": 657000000, "type": "start"},
+        {"label": "Animal Protein", "value": 426600000, "type": "increase"},
+        {"label": "Grains", "value": -8600000, "type": "decrease"},
+        {"label": "Supply Chain", "value": 165000000, "type": "increase"},
+        {"label": "Trading", "value": 5800000, "type": "increase"},
+        {"label": "Diversified Products", "value": -32800, "type": "decrease"},
+        {"label": "Group Net Cost", "value": 1700000, "type": "increase"},
+        {"label": "A", "value": 1200000000, "type": "end"}
+      ]
+    },
+    {
+      "period": "LTM", "breakdown_by": "Portfolio Company", "metric": "Revenue", "total_change_pct": -70.4,
+      "note": "Matches YTD Portfolio Company values",
+      "steps": [
+        {"label": "B", "value": 25300000000, "type": "start"},
+        {"label": "G3GH", "value": 3600000000, "type": "increase"},
+        {"label": "SALIC Ukraine", "value": 531700000, "type": "increase"},
+        {"label": "UFIC", "value": -38000000, "type": "decrease"},
+        {"label": "SABIL", "value": -50000000, "type": "decrease"},
+        {"label": "Olam Agri", "value": -21800000000, "type": "decrease"},
+        {"label": "SALIC Australia", "value": -37300000, "type": "decrease"},
+        {"label": "A", "value": 7500000000, "type": "end"}
+      ]
+    },
+    {
+      "period": "LTM", "breakdown_by": "Portfolio Company", "metric": "Gross Profit", "total_change_pct": -43.7,
+      "note": "Matches YTD Portfolio Company values",
+      "steps": [
+        {"label": "B", "value": 1600000000, "type": "start"},
+        {"label": "SALIC Ukraine", "value": 208000000, "type": "increase"},
+        {"label": "SABIL", "value": 194700000, "type": "increase"},
+        {"label": "G3GH", "value": 69000000, "type": "increase"},
+        {"label": "UFIC", "value": -2100000, "type": "decrease"},
+        {"label": "Olam Agri", "value": -1200000000, "type": "decrease"},
+        {"label": "SALIC Australia", "value": -15200000, "type": "decrease"},
+        {"label": "A", "value": 908000000, "type": "end"}
+      ]
+    },
+    {
+      "period": "LTM", "breakdown_by": "Portfolio Company", "metric": "EBITDA", "total_change_pct": 8.7,
+      "note": "Same components as YTD, re-ordered on the x-axis",
+      "steps": [
+        {"label": "B", "value": 1500000000, "type": "start"},
+        {"label": "Subsidiary", "value": -382500000, "type": "decrease"},
+        {"label": "Associates", "value": 246200000, "type": "increase"},
+        {"label": "Joint Ventures", "value": -30500000, "type": "decrease"},
+        {"label": "Financial Assets", "value": 256800000, "type": "increase"},
+        {"label": "Holdings", "value": 53900000, "type": "increase"},
+        {"label": "Group Net Cost", "value": -14800000, "type": "decrease"},
+        {"label": "A", "value": 1600000000, "type": "end"}
+      ]
+    },
+    {
+      "period": "LTM", "breakdown_by": "Portfolio Company", "metric": "Net Income", "total_change_pct": 89.9,
+      "note": "Same components as YTD, re-ordered on the x-axis",
+      "steps": [
+        {"label": "B", "value": 657000000, "type": "start"},
+        {"label": "Subsidiary", "value": 80400000, "type": "increase"},
+        {"label": "Associates", "value": 246200000, "type": "increase"},
+        {"label": "Joint Ventures", "value": -30500000, "type": "decrease"},
+        {"label": "Financial Assets", "value": 256800000, "type": "increase"},
+        {"label": "Holdings", "value": 36000000, "type": "increase"},
+        {"label": "Group Net Cost", "value": 1700000, "type": "increase"},
+        {"label": "A", "value": 1200000000, "type": "end"}
+      ]
+    }
+  ]
+}

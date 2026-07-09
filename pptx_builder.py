@@ -610,6 +610,13 @@ def render_planned_chart_slide(prs, spec):
         _pie_labels(chart)
         return slide
 
+    all_vals = [v for s in series for v in s["values"] if v is not None]
+    has_negative = any(v < 0 for v in all_vals)
+    # a single-series bar/column with mixed signs is a bridge/variance chart:
+    # colour each point by direction instead of one flat fill colour
+    per_point_sign = (n_ser == 1 and ctype in ("column", "bar")
+                       and has_negative and any(v >= 0 for v in all_vals))
+
     # series colours (fill for bars/areas, line colour for lines)
     for i, ser in enumerate(chart.plots[0].series):
         col = SERIES_PALETTE[i % len(SERIES_PALETTE)]
@@ -624,6 +631,10 @@ def render_planned_chart_slide(prs, spec):
             except Exception:
                 pass
             ser.smooth = False
+        elif per_point_sign:
+            for point, v in zip(ser.points, series[i]["values"]):
+                point.format.fill.solid()
+                point.format.fill.fore_color.rgb = GREEN if v >= 0 else RED
         else:
             ser.format.fill.solid()
             ser.format.fill.fore_color.rgb = col
@@ -632,15 +643,16 @@ def render_planned_chart_slide(prs, spec):
     if ctype != "stacked_column" and n_ser * n_cat <= 16:
         pos = "t" if ctype == "line" else (None if ctype == "area" else "outEnd")
         for i, ser in enumerate(chart.plots[0].series):
-            col = SERIES_PALETTE[i % len(SERIES_PALETTE)] if n_ser > 1 else DARKNAVY
+            col = DARKNAVY if (n_ser == 1 or per_point_sign) else SERIES_PALETTE[i % len(SERIES_PALETTE)]
             _series_labels(ser, Pt(14) if n_ser * n_cat > 8 else Pt(16),
                            str(col), number_format=num_fmt, pos=pos)
 
     va = chart.value_axis
     va.tick_labels.number_format = num_fmt
     va.tick_labels.number_format_is_linked = False
-    if ctype in ("column", "bar", "stacked_column", "area"):
-        va.minimum_scale = 0  # bars must start at a zero baseline
+    if ctype in ("column", "bar", "stacked_column", "area") and not has_negative:
+        va.minimum_scale = 0  # bars must start at a zero baseline; skip when
+        # values go negative (bridge/variance charts) so the axis can cross zero
     _style_axis(va, font_size=Pt(13))
     _style_axis(chart.category_axis, font_size=Pt(14), gridlines=False)
     if ctype == "stacked_column":
@@ -648,6 +660,115 @@ def render_planned_chart_slide(prs, spec):
     if ctype in ("column", "bar", "stacked_column"):
         _set_gap_width(chart, gap_pct=80 if n_ser == 1 else 120)
     return slide
+
+
+# ----------------------------------------------------- chat report slides
+
+def render_narrative_slide(prs, title, text):
+    """One content slide with a single block of narrative text (AI chat answer)."""
+    text = (text or "").strip()
+    if not text:
+        return None
+    slide = _add_titled_slide(prs, title or "Insight", "")
+    tb = slide.shapes.add_textbox(Inches(2.0), Inches(3.2), Inches(22.6), Inches(9.5))
+    tf = tb.text_frame
+    tf.word_wrap = True
+    paras = [p.strip() for p in text.split("\n") if p.strip()] or [text]
+    _set_lines(tf, [[(p, {"size": Pt(20), "color": DARKNAVY})] for p in paras])
+    for para in tf.paragraphs:
+        para.space_after = Pt(14)
+        para.alignment = PP_ALIGN.LEFT
+    return slide
+
+
+def render_table_slide(prs, spec):
+    """One content slide with a native pptx table (AI chat table answer).
+    Spec: {title, columns:[...], rows:[[...], ...]}."""
+    cols = [str(c) for c in (spec.get("columns") or [])]
+    rows = [r for r in (spec.get("rows") or []) if isinstance(r, list)]
+    if not cols or not rows:
+        return None
+    slide = _add_titled_slide(prs, spec.get("title") or "Table", "")
+
+    n_rows, n_cols = len(rows) + 1, len(cols)
+    x, y, w, h = Inches(2.0), Inches(3.3), Inches(22.6), min(Inches(0.7) * n_rows, Inches(10.2))
+    gf = slide.shapes.add_table(n_rows, n_cols, x, y, w, h)
+    table = gf.table
+
+    for j, col in enumerate(cols):
+        cell = table.cell(0, j)
+        cell.text = str(col)
+        cell.fill.solid()
+        cell.fill.fore_color.rgb = NAVY
+        for para in cell.text_frame.paragraphs:
+            para.font.size = Pt(16)
+            para.font.bold = True
+            para.font.color.rgb = RGBColor(0xFF, 0xFF, 0xFF)
+
+    for i, row in enumerate(rows, start=1):
+        for j in range(n_cols):
+            val = row[j] if j < len(row) else ""
+            cell = table.cell(i, j)
+            cell.text = str(val)
+            cell.fill.solid()
+            cell.fill.fore_color.rgb = RGBColor(0xF5, 0xF8, 0xFA) if i % 2 == 0 else RGBColor(0xFF, 0xFF, 0xFF)
+            for para in cell.text_frame.paragraphs:
+                para.font.size = Pt(15)
+                para.font.color.rgb = DARKNAVY
+    return slide
+
+
+def build_report_pptx(blocks, company="SALIC", period=""):
+    """Assemble a SALIC-template deck from AI chat report blocks.
+    blocks: list of {"type": "narrative"|"chart"|"table", ...}
+      narrative -> {"title", "text"}
+      chart     -> {"spec"}  (validated chart spec, see planner.py)
+      table     -> {"spec"}  ({"title","columns","rows"})
+    Independent of build_pptx / the voice-to-slide flow."""
+    company = (company or "SALIC").strip()
+    period = (period or "").strip()
+
+    prs = Presentation(TEMPLATE)
+    slides = list(prs.slides)
+
+    title = f"{company} — AI Insights Report"
+    if period:
+        title += f" · {period}"
+
+    _fill_cover(slides[COVER], title)
+    _fill_section(
+        slides[SECTION],
+        "AI-Generated Insights",
+        "Answers, charts and tables generated from the SALIC dashboard data",
+    )
+
+    report_slides = []
+    for block in blocks or []:
+        btype = (block or {}).get("type")
+        try:
+            if btype == "narrative":
+                s = render_narrative_slide(prs, block.get("title") or "Insight", block.get("text") or "")
+            elif btype == "chart":
+                s = render_planned_chart_slide(prs, block.get("spec") or {})
+            elif btype == "table":
+                s = render_table_slide(prs, block.get("spec") or {})
+            else:
+                s = None
+        except Exception as e:
+            print(f"[pptx] report block skipped ({e})")
+            s = None
+        if s is not None:
+            report_slides.append(s)
+
+    ordered = [slides[COVER].slide_id, slides[SECTION].slide_id]
+    ordered += [s.slide_id for s in report_slides]
+    ordered.append(slides[THANKYOU].slide_id)
+    _arrange(prs, ordered)
+
+    buf = io.BytesIO()
+    prs.save(buf)
+    buf.seek(0)
+    return buf
 
 
 # ---------------------------------------------------------------- assembly

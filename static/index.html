@@ -178,7 +178,14 @@ textarea{width:100%;min-height:88px;border:1px solid var(--line);border-radius:8
     <div class="fld"><label>Commentary (one point per line)</label>
       <textarea id="f_comm" style="min-height:66px"></textarea></div>
 
-    <h2 style="margin-top:14px">3 · Deck options</h2>
+    <h2 style="margin-top:14px">3 · AI charts <span class="badge">beta</span></h2>
+    <div class="actions" style="margin-top:0">
+      <button class="btn ghost" id="planbtn">✨ Suggest charts from text (AI)</button>
+    </div>
+    <div class="status" id="planstatus">AI reads the transcript and proposes extra chart slides — trends, comparisons, breakdowns.</div>
+    <div id="aicharts"></div>
+
+    <h2 style="margin-top:14px">4 · Deck options</h2>
     <div class="opts">
       <label><input type="checkbox" id="opt_agenda" checked/> Agenda slide</label>
       <label><input type="checkbox" id="opt_charts" checked/> Chart slides</label>
@@ -376,8 +383,87 @@ function gatherData(){
     charts:document.getElementById('opt_charts').checked,
     thankyou:document.getElementById('opt_thanks').checked
   };
+  d.charts=gatherCharts();
   return d;
 }
+
+/* ---- AI chart cards ---- */
+const CHART_TYPES=[["line","Line (trend)"],["column","Column"],["bar","Bar (horizontal)"],
+  ["stacked_column","Stacked column"],["area","Area"],["pie","Pie"],["donut","Donut"]];
+function chartCard(spec){
+  const card=document.createElement('div');card.className="kpiblock aichart";
+  const opts=CHART_TYPES.map(([v,l])=>`<option value="${v}"${v===spec.type?' selected':''}>${l}</option>`).join('');
+  const grid=[spec.categories.join(", ")]
+    .concat(spec.series.map(s=>s.name+": "+s.values.map(v=>v===null?"":v).join(", ")))
+    .join("\n");
+  card.innerHTML=`
+    <div class="h" style="display:flex;align-items:center;gap:6px">
+      <label style="display:flex;align-items:center;gap:5px;font-weight:400">
+        <input type="checkbox" class="ai_use" checked/> include</label>
+      <select class="ai_type" style="border:1px solid var(--line);border-radius:6px;padding:4px">${opts}</select>
+      <span style="flex:1"></span>
+      <span class="chip ai_del" title="Remove">✕</span>
+    </div>
+    <div class="fld"><label>Title</label><input class="ai_title"/></div>
+    <div class="fld"><label>Insight (subtitle)</label><input class="ai_insight"/></div>
+    <div class="row3" style="grid-template-columns:1fr 1fr">
+      <div class="fld"><label>Unit</label><input class="ai_unit"/></div>
+    </div>
+    <div class="fld"><label>Data — line 1: categories · then one line per series "Name: v1, v2, …" (no thousand separators)</label>
+      <textarea class="ai_data" style="min-height:64px;font-family:ui-monospace,Menlo,monospace;font-size:12px"></textarea></div>`;
+  card.querySelector('.ai_title').value=spec.title||"";
+  card.querySelector('.ai_insight').value=spec.insight||"";
+  card.querySelector('.ai_unit').value=spec.unit||"";
+  card.querySelector('.ai_data').value=grid;
+  card.querySelector('.ai_del').onclick=()=>card.remove();
+  return card;
+}
+function renderChartCards(charts){
+  const host=document.getElementById('aicharts');host.innerHTML="";
+  charts.forEach(c=>host.appendChild(chartCard(c)));
+}
+function gatherCharts(){
+  const out=[];
+  document.querySelectorAll('#aicharts .aichart').forEach(card=>{
+    if(!card.querySelector('.ai_use').checked)return;
+    const lines=card.querySelector('.ai_data').value.split("\n").map(s=>s.trim()).filter(Boolean);
+    if(lines.length<2)return;
+    const categories=lines[0].split(",").map(s=>s.trim()).filter(Boolean);
+    const series=[];
+    lines.slice(1).forEach(ln=>{
+      const i=ln.indexOf(":");if(i<0)return;
+      const name=ln.slice(0,i).trim()||"Series";
+      const values=ln.slice(i+1).split(",").map(s=>{const t=s.trim();if(t==="")return null;const n=parseFloat(t);return isNaN(n)?null:n;});
+      while(values.length<categories.length)values.push(null);
+      if(values.some(v=>v!==null))series.push({name,values:values.slice(0,categories.length)});
+    });
+    if(categories.length&&series.length)
+      out.push({type:card.querySelector('.ai_type').value,
+        title:card.querySelector('.ai_title').value.trim(),
+        insight:card.querySelector('.ai_insight').value.trim(),
+        unit:card.querySelector('.ai_unit').value.trim(),
+        categories,series});
+  });
+  return out;
+}
+async function planCharts(){
+  const text=document.getElementById('transcript').value.trim();
+  const st=document.getElementById('planstatus');
+  if(!text){st.textContent="Nothing to analyse — record or type an update first.";return;}
+  st.textContent="🤖 AI is reading the text and planning charts…";
+  document.getElementById('planbtn').disabled=true;
+  try{
+    const r=await fetch('/plan',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text})});
+    if(!r.ok)throw new Error("server "+r.status);
+    const j=await r.json();
+    renderChartCards(j.charts||[]);
+    st.textContent=(j.charts&&j.charts.length)
+      ? j.charts.length+" chart(s) proposed — edit anything, untick to drop, then Download."
+      : "No extra chartable data found in the text (KPI slides still included).";
+  }catch(e){st.textContent="Chart planning failed: "+e.message;}
+  document.getElementById('planbtn').disabled=false;
+}
+document.getElementById('planbtn').onclick=planCharts;
 function fmt(n){if(n===null||n===undefined||n==="")return "—";const neg=n<0;n=Math.abs(n);let s=n>=100?Math.round(n).toLocaleString():n.toLocaleString(undefined,{maximumFractionDigits:1});return (neg?"(":"")+s+(neg?")":"");}
 
 function blockLines(k,unit){
@@ -519,6 +605,7 @@ async function onStop(){
     document.getElementById('transcript').value=j.transcript||"";
     applyData(j.data);render();
     setStatus(j.transcript? "Done — edit any field, then Build deck / Download.":"No speech detected — try again or type it in.");
+    if(j.transcript) planCharts();   // AI proposes extra charts from the speech
   }catch(e){ setStatus("Transcription failed: "+e.message+" (is the server running?)"); }
   micBtn.disabled=false;micBtn.classList.remove('rec');micBtn.textContent="🎤 Start recording";
 }

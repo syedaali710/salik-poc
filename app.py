@@ -15,6 +15,7 @@ from fastapi import FastAPI, UploadFile, File, Body
 from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 
 from parsing import parse
+from planner import plan_charts
 from pptx_builder import build_pptx
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -79,6 +80,12 @@ async def transcribe(audio: UploadFile = File(...)):
 @app.post("/parse")
 async def parse_endpoint(payload: dict = Body(...)):
     return JSONResponse({"data": parse(payload.get("text", ""))})
+
+
+@app.post("/plan")
+async def plan_endpoint(payload: dict = Body(...)):
+    """Transcript text -> AI chart plan (list of chart specs, possibly empty)."""
+    return JSONResponse({"charts": plan_charts(payload.get("text", ""))})
 
 
 @app.post("/generate")

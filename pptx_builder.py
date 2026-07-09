@@ -506,6 +506,150 @@ def _variance_chart_slide(prs, kpis, unit, period):
     return slide
 
 
+# ------------------------------------------------- AI-planned chart slides
+
+YELLOW = RGBColor(0xE6, 0xAF, 0x00)
+SERIES_PALETTE = (NAVY, SKY, GREEN, LIGHTGREEN, RED, YELLOW)
+
+PLANNED_XL_TYPES = {
+    "column": XL_CHART_TYPE.COLUMN_CLUSTERED,
+    "bar": XL_CHART_TYPE.BAR_CLUSTERED,
+    "stacked_column": XL_CHART_TYPE.COLUMN_STACKED,
+    "line": XL_CHART_TYPE.LINE_MARKERS,
+    "area": XL_CHART_TYPE.AREA,
+    "pie": XL_CHART_TYPE.PIE,
+    "donut": XL_CHART_TYPE.DOUGHNUT,
+}
+
+
+def _spec_number_format(spec):
+    vals = [v for s in spec["series"] for v in s["values"] if v is not None]
+    if vals and all(abs(v) < 100 for v in vals) and any(v != int(v) for v in vals):
+        return "#,##0.0;(#,##0.0)"
+    return "#,##0;(#,##0)"
+
+
+def _set_overlap(chart, pct):
+    for tag in ("c:barChart", "c:bar3DChart"):
+        el = chart._element.find(f".//{qn(tag)}")
+        if el is not None:
+            ov = el.find(qn("c:overlap"))
+            if ov is None:
+                ov = etree.SubElement(el, qn("c:overlap"))
+                gw = el.find(qn("c:gapWidth"))
+                if gw is not None:
+                    gw.addnext(ov)
+            ov.set("val", str(pct))
+
+
+def _pie_labels(chart, font_size=Pt(16)):
+    """Percentage labels on slices, category names in the legend."""
+    plot = chart.plots[0]
+    plot.has_data_labels = True
+    dl = plot.data_labels
+    dl.show_percentage = True
+    dl.show_value = False
+    dl.show_category_name = False
+    dl.number_format = "0%"
+    dl.number_format_is_linked = False
+    dl.font.size = font_size
+    dl.font.bold = True
+    dl.font.color.rgb = RGBColor(0xFF, 0xFF, 0xFF)
+
+
+def render_planned_chart_slide(prs, spec):
+    """Draw one AI/user-specified chart spec on a new SALIC content slide.
+    Spec: {type, title, insight, unit, categories, series:[{name, values}]}."""
+    ctype = spec.get("type", "column")
+    xl_type = PLANNED_XL_TYPES.get(ctype)
+    if xl_type is None:
+        return None
+    cats = spec.get("categories") or []
+    series = [s for s in (spec.get("series") or []) if s.get("values")]
+    if not cats or not series:
+        return None
+    if ctype in ("pie", "donut"):
+        series = series[:1]
+
+    num_fmt = _spec_number_format(spec)
+    title = spec.get("title") or "Chart"
+    unit = (spec.get("unit") or "").strip()
+    if unit and unit.lower() not in title.lower():
+        title += f" ({unit})"
+    slide = _add_titled_slide(prs, title, spec.get("insight") or "", DARKNAVY)
+
+    data = CategoryChartData(number_format=num_fmt)
+    data.categories = [str(c) for c in cats]
+    for s in series:
+        data.add_series(str(s.get("name") or "Series"),
+                        [v for v in s["values"]])
+
+    if ctype in ("pie", "donut"):
+        x, y, w, h = Inches(7.3), Inches(3.0), Inches(12.0), Inches(10.6)
+    else:
+        x, y, w, h = Inches(2.0), Inches(3.1), Inches(22.6), Inches(10.5)
+    gf = slide.shapes.add_chart(xl_type, x, y, w, h, data)
+    chart = gf.chart
+    _style_chart(chart, base_size=Pt(14))
+
+    n_ser, n_cat = len(series), len(cats)
+    chart.has_legend = n_ser > 1 or ctype in ("pie", "donut")
+    if chart.has_legend:
+        chart.legend.position = XL_LEGEND_POSITION.BOTTOM
+        chart.legend.include_in_layout = False
+        chart.legend.font.size = Pt(15)
+        chart.legend.font.color.rgb = DARKNAVY
+
+    if ctype in ("pie", "donut"):
+        # one colour per slice
+        ser = chart.plots[0].series[0]
+        for i in range(n_cat):
+            point = ser.points[i]
+            point.format.fill.solid()
+            point.format.fill.fore_color.rgb = SERIES_PALETTE[i % len(SERIES_PALETTE)]
+        _pie_labels(chart)
+        return slide
+
+    # series colours (fill for bars/areas, line colour for lines)
+    for i, ser in enumerate(chart.plots[0].series):
+        col = SERIES_PALETTE[i % len(SERIES_PALETTE)]
+        if ctype == "line":
+            ser.format.line.color.rgb = col
+            ser.format.line.width = Pt(3)
+            try:
+                ser.marker.style = 8  # circle
+                ser.marker.format.fill.solid()
+                ser.marker.format.fill.fore_color.rgb = col
+                ser.marker.format.line.color.rgb = col
+            except Exception:
+                pass
+            ser.smooth = False
+        else:
+            ser.format.fill.solid()
+            ser.format.fill.fore_color.rgb = col
+
+    # data labels when the chart stays readable with them
+    if ctype != "stacked_column" and n_ser * n_cat <= 16:
+        pos = "t" if ctype == "line" else (None if ctype == "area" else "outEnd")
+        for i, ser in enumerate(chart.plots[0].series):
+            col = SERIES_PALETTE[i % len(SERIES_PALETTE)] if n_ser > 1 else DARKNAVY
+            _series_labels(ser, Pt(14) if n_ser * n_cat > 8 else Pt(16),
+                           str(col), number_format=num_fmt, pos=pos)
+
+    va = chart.value_axis
+    va.tick_labels.number_format = num_fmt
+    va.tick_labels.number_format_is_linked = False
+    if ctype in ("column", "bar", "stacked_column", "area"):
+        va.minimum_scale = 0  # bars must start at a zero baseline
+    _style_axis(va, font_size=Pt(13))
+    _style_axis(chart.category_axis, font_size=Pt(14), gridlines=False)
+    if ctype == "stacked_column":
+        _set_overlap(chart, 100)
+    if ctype in ("column", "bar", "stacked_column"):
+        _set_gap_width(chart, gap_pct=80 if n_ser == 1 else 120)
+    return slide
+
+
 # ---------------------------------------------------------------- assembly
 
 def _arrange(prs, ordered_ids):
@@ -561,6 +705,16 @@ def build_pptx(d):
             s = maker(prs, kpis, unit, period)
             if s is not None:
                 chart_slides.append(s)
+
+    # AI-planned charts (validated specs from planner.py / the UI cards)
+    for spec in (d.get("charts") or [])[:6]:
+        try:
+            s = render_planned_chart_slide(prs, spec)
+        except Exception as e:
+            print(f"[pptx] planned chart skipped ({e})")
+            s = None
+        if s is not None:
+            chart_slides.append(s)
 
     ordered = [slides[COVER].slide_id]
     if inc_agenda:

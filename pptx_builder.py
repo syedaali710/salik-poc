@@ -671,6 +671,7 @@ def render_planned_chart_slide(prs, spec):
         # values go negative (bridge/variance charts) so the axis can cross zero
     _style_axis(va, font_size=Pt(13))
     _style_axis(chart.category_axis, font_size=Pt(14), gridlines=False)
+    _ensure_orientation(va)
     if ctype == "stacked_column":
         _set_overlap(chart, 100)
     if ctype in ("column", "bar", "stacked_column"):

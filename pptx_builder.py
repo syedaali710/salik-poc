@@ -38,12 +38,15 @@ DARKNAVY = RGBColor(0x08, 0x30, 0x5C)
 RED = RGBColor(0xD9, 0x3F, 0x40)
 GREY = RGBColor(0x6B, 0x6B, 0x6B)
 
-# 0-based indices of the template slides we use
-COVER, AGENDA, SECTION, SUBSECTION, CONTENT, THANKYOU = 0, 1, 2, 3, 7, 9
+# 0-based indices of the template slides we use. This template has no
+# standalone Agenda slide (only a thumbnail example on its brand-guide page),
+# so AGENDA is None and every AGENDA usage below is guarded accordingly.
+COVER, SECTION, SUBSECTION, CONTENT, THANKYOU = 0, 1, 2, 6, 8
+AGENDA = None
 
 CONTENT_LAYOUT_NAME = "Content Slide Light"
-TITLE_PLACEHOLDER_IDX = 11
-EYEBROW_PLACEHOLDER_IDX = 10
+TITLE_PLACEHOLDER_IDX = 2
+EYEBROW_PLACEHOLDER_IDX = 1
 
 KPIDEFS = [("rev", "Revenue"), ("ebitda", "EBITDA"), ("ni", "Net Income")]
 
@@ -791,7 +794,7 @@ def build_pptx(d):
     kpis = d.get("kpis") or {}
     comm = [str(c) for c in (d.get("comm") or []) if str(c).strip()][:5]
     include = d.get("include") or {}
-    inc_agenda = include.get("agenda", True)
+    inc_agenda = include.get("agenda", True) and AGENDA is not None
     inc_charts = include.get("charts", True)
     inc_thanks = include.get("thankyou", True)
 

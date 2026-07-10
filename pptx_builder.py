@@ -280,6 +280,19 @@ def _style_axis(axis, font_size=Pt(14), gridlines=True):
     etree.SubElement(fill, qn("a:srgbClr")).set("val", "E3E3E3")
 
 
+def _ensure_orientation(axis):
+    """Explicitly write <c:orientation val="minMax"/> under <c:scaling>.
+    python-pptx omits this element when the orientation is the default
+    minMax, leaving <c:scaling/> completely empty — some viewers render a
+    chart with no explicit axis orientation as blank, so make it explicit."""
+    scaling = axis._element.find(qn("c:scaling"))
+    if scaling is None or scaling.find(qn("c:orientation")) is not None:
+        return
+    orient = scaling.makeelement(qn("c:orientation"), {})
+    orient.set("val", "minMax")
+    scaling.insert(0, orient)
+
+
 def _hide_axis_line(axis):
     ax = axis._element
     sp_pr = ax.find(qn("c:spPr"))

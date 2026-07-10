@@ -739,11 +739,6 @@ def build_report_pptx(blocks, company="SALIC", period=""):
         title += f" · {period}"
 
     _fill_cover(slides[COVER], title)
-    _fill_section(
-        slides[SECTION],
-        "AI-Generated Insights",
-        "Answers, charts and tables generated from the SALIC dashboard data",
-    )
 
     report_slides = []
     for block in blocks or []:
@@ -763,7 +758,7 @@ def build_report_pptx(blocks, company="SALIC", period=""):
         if s is not None:
             report_slides.append(s)
 
-    ordered = [slides[COVER].slide_id, slides[SECTION].slide_id]
+    ordered = [slides[COVER].slide_id]
     ordered += [s.slide_id for s in report_slides]
     ordered.append(slides[THANKYOU].slide_id)
     _arrange(prs, ordered)

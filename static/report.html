@@ -30,6 +30,10 @@ header.app nav a.active{color:#fff;font-weight:600;text-decoration:underline}
 .askbar input{flex:1;border:1px solid var(--line);border-radius:10px;padding:12px 14px;font-size:14px}
 .askbar button{border:none;border-radius:10px;padding:12px 20px;font-weight:600;font-size:14px;background:var(--navy);color:#fff;cursor:pointer;white-space:nowrap}
 .askbar button:disabled{opacity:.6;cursor:default}
+.micbtn{background:var(--green);padding:12px 16px;display:flex;align-items:center;gap:6px}
+.micbtn.rec{background:var(--red);animation:pulse 1.2s infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(217,63,64,.5)}70%{box-shadow:0 0 0 10px rgba(217,63,64,0)}100%{box-shadow:0 0 0 0 rgba(217,63,64,0)}}
+.micstatus{font-size:11.5px;color:var(--muted);margin-top:6px;min-height:14px}
 .suggest{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
 .suggest span{font-size:11.5px;background:var(--lightblue);color:var(--navy);border:1px solid #cfe3f2;border-radius:20px;padding:5px 10px;cursor:pointer}
 .suggest span:hover{background:var(--sky);color:#fff}
@@ -89,8 +93,10 @@ table.minitbl tr:nth-child(even) td{background:#f7fafc}
     <h2>Ask a question</h2>
     <div class="askbar">
       <input id="q" placeholder="e.g. How did Revenue perform vs budget YTD? What drove the EBITDA bridge by segment?" />
+      <button id="mic" class="micbtn" title="Speak your question">🎤</button>
       <button id="ask">Ask</button>
     </div>
+    <div class="micstatus" id="micstatus"></div>
     <div class="suggest" id="suggest"></div>
     <div class="chat" id="chat"></div>
   </div>
@@ -108,6 +114,40 @@ table.minitbl tr:nth-child(even) td{background:#f7fafc}
 <script>
 const LOGO="data:image/png;base64,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";
 document.getElementById('hdrlogo').src=LOGO;
+
+// ---- mic recording -> /transcribe -> fills the question box only ----
+let mediaRecorder=null, chunks=[], micStream=null, recording=false;
+const micBtn=document.getElementById('mic');
+const micStatus=document.getElementById('micstatus');
+async function startRec(){
+  try{ micStream=await navigator.mediaDevices.getUserMedia({audio:true}); }
+  catch(e){ micStatus.textContent="Microphone blocked: "+e.message; return; }
+  chunks=[];
+  const mime=MediaRecorder.isTypeSupported('audio/webm')?'audio/webm':'';
+  mediaRecorder=new MediaRecorder(micStream, mime?{mimeType:mime}:undefined);
+  mediaRecorder.ondataavailable=e=>{ if(e.data.size>0) chunks.push(e.data); };
+  mediaRecorder.onstop=onStopRec;
+  mediaRecorder.start();
+  recording=true;
+  micBtn.classList.add('rec');
+  micStatus.textContent="🔴 Recording… speak your question, then press the mic again to stop.";
+}
+async function onStopRec(){
+  const blob=new Blob(chunks,{type:'audio/webm'});
+  if(micStream) micStream.getTracks().forEach(t=>t.stop());
+  micBtn.disabled=true;micBtn.classList.remove('rec');
+  micStatus.textContent="⏳ Transcribing…";
+  try{
+    const fd=new FormData();fd.append('audio',blob,'mic.webm');
+    const r=await fetch('/transcribe',{method:'POST',body:fd});
+    if(!r.ok)throw new Error("server "+r.status);
+    const j=await r.json();
+    document.getElementById('q').value=j.transcript||"";
+    micStatus.textContent=j.transcript?"Transcribed — edit if needed, then click Ask.":"No speech detected — try again.";
+  }catch(e){ micStatus.textContent="Transcription failed: "+e.message; }
+  micBtn.disabled=false;
+}
+micBtn.onclick=()=>{ recording? (recording=false, mediaRecorder.stop()) : startRec(); };
 
 const HISTORY=[];
 const REPORT=[];

@@ -15,6 +15,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 
 from pptx_builder import build_report_pptx
 from chat import answer_question
+from heygen import create_session_token
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 app = FastAPI(title="SALIC AI Insights")

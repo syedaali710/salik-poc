@@ -30,19 +30,22 @@ header.app nav a.active{color:#fff;font-weight:600;text-decoration:underline}
 .panel{background:#fff;border:1px solid #eef1f4;border-radius:16px;padding:16px;box-shadow:0 8px 24px rgba(10,40,70,.06),0 2px 6px rgba(10,40,70,.04)}
 .panel h2{margin:0 0 10px;font-size:14px;color:var(--navy);text-transform:uppercase;letter-spacing:.5px}
 
-/* ---- ask bar ---- */
-.askbar{display:flex;gap:8px}
-.askbar input{flex:1;border:1px solid #dde3e9;border-radius:10px;padding:12px 14px;font-size:14px;outline:none;transition:box-shadow .15s,border-color .15s}
-.askbar input:focus{border-color:var(--navy);box-shadow:0 0 0 3px rgba(11,77,137,.18)}
-.askbar button{border:none;border-radius:10px;padding:12px 20px;font-weight:600;font-size:14px;background:var(--darknavy);color:#fff;cursor:pointer;white-space:nowrap}
+/* ---- ask bar: voice is the primary path, typing is a de-emphasized fallback ---- */
+.askbar{display:flex;gap:8px;align-items:center}
+.askbar input{flex:1;border:1px solid #eceff2;border-radius:10px;padding:9px 12px;font-size:12.5px;color:var(--muted);background:#fafbfc;outline:none;transition:box-shadow .15s,border-color .15s,color .15s}
+.askbar input:focus{border-color:var(--navy);box-shadow:0 0 0 3px rgba(11,77,137,.12);color:var(--ink)}
+.askbar button{border:none;border-radius:10px;padding:9px 16px;font-weight:600;font-size:12.5px;background:#eef1f4;color:var(--muted);cursor:pointer;white-space:nowrap}
+.askbar button:hover{background:#e4e8ec}
 .askbar button:disabled{opacity:.6;cursor:default}
-.micbtn{background:var(--green);padding:12px 16px;display:flex;align-items:center;gap:6px}
-.micbtn.rec{background:var(--red);animation:pulse 1.2s infinite}
+.micbtn{background:var(--green);padding:16px 22px;display:flex;align-items:center;gap:6px;font-size:20px;border-radius:14px;box-shadow:0 4px 14px rgba(42,124,98,.3)}
+.micbtn:hover{background:#256b55}
+.micbtn.rec{background:var(--red);animation:pulse 1.2s infinite;box-shadow:0 4px 14px rgba(217,63,64,.35)}
 @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(217,63,64,.5)}70%{box-shadow:0 0 0 10px rgba(217,63,64,0)}100%{box-shadow:0 0 0 0 rgba(217,63,64,0)}}
-.micstatus{font-size:11.5px;color:var(--muted);margin-top:6px;min-height:14px}
+.micstatus{font-size:11.5px;color:var(--muted);margin-top:6px;min-height:14px;text-align:center}
 .avatarwrap{position:relative;width:260px;height:220px;border-radius:20px;overflow:hidden;background:linear-gradient(180deg,#EEF3F8,#E6EDF4);margin:0 auto 14px;box-shadow:inset 0 0 0 1px rgba(11,77,137,.06)}
-.avatarwrap video{display:none}
-.avatarwrap canvas{width:100%;height:100%;display:block}
+.avatarwrap video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.avatarwrap canvas{position:absolute;inset:0;width:100%;height:100%;display:block;opacity:0;transition:opacity .2s}
+.avatarwrap canvas.ready{opacity:1}
 .avatarstatus{position:absolute;left:0;right:0;bottom:0;padding:6px 10px;font-size:11.5px;color:#fff;background:rgba(8,48,92,.65)}
 .suggest{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
 .suggest span{font-size:11.5px;background:var(--lightblue);color:var(--navy);border:1px solid #cfe3f2;border-radius:20px;padding:5px 10px;cursor:pointer;transition:background .12s,color .12s}
@@ -109,8 +112,8 @@ table.minitbl tr:nth-child(even) td{background:#f7fafc}
       <div class="avatarstatus" id="avatarStatus">Loading avatar…</div>
     </div>
     <div class="askbar">
-      <input id="q" placeholder="e.g. How did Revenue perform vs budget YTD? What drove the EBITDA bridge by segment?" />
       <button id="mic" class="micbtn" title="Speak your question">🎤</button>
+      <input id="q" placeholder="or type instead…" />
       <button id="ask">Ask</button>
     </div>
     <div class="micstatus" id="micstatus"></div>

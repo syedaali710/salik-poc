@@ -276,6 +276,7 @@ async function ask(){
     HISTORY.push({role:'user',content:q});
     HISTORY.push({role:'assistant',content:j.answer});
     addAiMsg(j);
+    if(window.__avatarSpeak) window.__avatarSpeak(j.answer);
   }catch(e){
     addErrMsg("Couldn't get an answer: "+e.message);
   }

@@ -150,7 +150,7 @@ async function startRec(){
   mediaRecorder.start();
   recording=true;
   micBtn.classList.add('rec');
-  micStatus.textContent="🔴 Recording… speak your question, then press the mic again to stop.";
+  micStatus.textContent="🔴 Listening… tap the mic again when you're done.";
 }
 async function onStopRec(){
   const blob=new Blob(chunks,{type:'audio/webm'});
@@ -162,8 +162,13 @@ async function onStopRec(){
     const r=await fetch('/transcribe',{method:'POST',body:fd});
     if(!r.ok)throw new Error("server "+r.status);
     const j=await r.json();
-    document.getElementById('q').value=j.transcript||"";
-    micStatus.textContent=j.transcript?"Transcribed — edit if needed, then click Ask.":"No speech detected — try again.";
+    if(j.transcript){
+      document.getElementById('q').value=j.transcript;
+      micStatus.textContent="";
+      ask();
+    }else{
+      micStatus.textContent="Didn't catch that — try again.";
+    }
   }catch(e){ micStatus.textContent="Transcription failed: "+e.message; }
   micBtn.disabled=false;
 }

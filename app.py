@@ -20,7 +20,8 @@ from heygen import create_session_token
 HERE = os.path.dirname(os.path.abspath(__file__))
 app = FastAPI(title="SALIC AI Insights")
 
-# Whisper model is loaded lazily on first transcription (first call downloads it).
+# Whisper model is preloaded at server startup (see @app.on_event("startup")
+# below) so the first mic click isn't stuck waiting on model init/download.
 _MODEL = None
 
 
@@ -33,6 +34,11 @@ def get_model():
         _MODEL = WhisperModel(size, device="cpu", compute_type="int8")
         print("[whisper] ready.")
     return _MODEL
+
+
+@app.on_event("startup")
+def _preload_model():
+    get_model()
 
 
 def transcribe_audio(path: str) -> str:

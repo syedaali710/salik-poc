@@ -372,25 +372,34 @@ let chromaKeySupported = true;
 function startChromaKeyLoop(video){
   resizeCanvas();
   function frame(){
-    if (video.readyState >= 2 && video.videoWidth) {
-      drawCover(video);
-      // Some privacy/anti-fingerprinting browser extensions block or corrupt
-      // getImageData reads on canvases fed by live video, which would
-      // otherwise leave this canvas blank while audio still plays fine.
-      // Fall back to showing the raw (green-background) frame instead of
-      // nothing if that happens.
-      if (chromaKeySupported) {
-        try {
-          const imageData = canvasCtx.getImageData(0, 0, canvasEl.width, canvasEl.height);
-          keyOutGreen(imageData);
-          canvasCtx.putImageData(imageData, 0, 0);
-        } catch (e) {
-          chromaKeySupported = false;
-          console.warn('chroma-key disabled, falling back to raw video frame', e);
+    // The whole body is wrapped in try/finally so a draw/read failure on any
+    // single frame (see below) can never permanently kill the loop — without
+    // this, one thrown error here would silently stop requestAnimationFrame
+    // from ever being rescheduled, leaving the canvas blank forever while
+    // audio (on its own unaffected element) kept playing.
+    try {
+      if (video.readyState >= 2 && video.videoWidth) {
+        drawCover(video);
+        // Some privacy/anti-fingerprinting browser extensions block or
+        // corrupt getImageData reads (or even drawImage itself) on canvases
+        // fed by live video. Fall back to showing the raw (green-background)
+        // frame instead of nothing if that happens.
+        if (chromaKeySupported) {
+          try {
+            const imageData = canvasCtx.getImageData(0, 0, canvasEl.width, canvasEl.height);
+            keyOutGreen(imageData);
+            canvasCtx.putImageData(imageData, 0, 0);
+          } catch (e) {
+            chromaKeySupported = false;
+            console.warn('chroma-key disabled, falling back to raw video frame', e);
+          }
         }
       }
+    } catch (e) {
+      console.warn('avatar frame draw failed', e);
+    } finally {
+      requestAnimationFrame(frame);
     }
-    requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
 }

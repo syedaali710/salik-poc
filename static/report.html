@@ -374,44 +374,67 @@ function drawCover(video){
 
 // Chroma-key: HeyGen video avatars render on a green-screen backdrop; key it
 // out here so the panel's own background shows through instead.
+// -> fraction of pixels made transparent (0..1), so the caller can sanity-
+// check that keying removed *some* background without wiping the whole
+// frame (which would mean the heuristic mismatched, e.g. compressed mobile
+// video shifting colors green-ish).
 function keyOutGreen(imageData){
   const d = imageData.data;
+  let keyed = 0;
+  const total = d.length / 4;
   for (let i = 0; i < d.length; i += 4) {
     const r = d[i], g = d[i + 1], b = d[i + 2];
-    if (g > 90 && g > 1.25 * r && g > 1.25 * b) d[i + 3] = 0;
+    if (g > 90 && g > 1.25 * r && g > 1.25 * b) { d[i + 3] = 0; keyed++; }
   }
+  return keyed / total;
 }
 
+// The raw <video> is always visible underneath as the guaranteed-to-work
+// baseline (plain HTML5 video playback, works everywhere). The keyed
+// canvas is layered on top and only faded in once it's proven to produce a
+// plausible result on THIS device/browser — some browsers/phones silently
+// fail to ever produce a good keyed frame (blocked pixel reads, choked
+// on CPU, or color-shifted compressed video keying out almost everything),
+// and rather than special-case those, we just never promote the canvas and
+// the video stays visible with its natural background.
 let chromaKeySupported = true;
+let goodFrameStreak = 0;
 
 function startChromaKeyLoop(video){
   resizeCanvas();
   function frame(){
     // The whole body is wrapped in try/finally so a draw/read failure on any
-    // single frame (see below) can never permanently kill the loop — without
-    // this, one thrown error here would silently stop requestAnimationFrame
-    // from ever being rescheduled, leaving the canvas blank forever while
-    // audio (on its own unaffected element) kept playing.
+    // single frame can never permanently kill the loop — otherwise one
+    // thrown error would silently stop requestAnimationFrame from ever
+    // rescheduling, leaving the canvas frozen forever while audio (on its
+    // own unaffected element) kept playing.
     try {
       if (video.readyState >= 2 && video.videoWidth) {
         drawCover(video);
-        // Some privacy/anti-fingerprinting browser extensions block or
-        // corrupt getImageData reads (or even drawImage itself) on canvases
-        // fed by live video. Fall back to showing the raw (green-background)
-        // frame instead of nothing if that happens.
         if (chromaKeySupported) {
           try {
             const imageData = canvasCtx.getImageData(0, 0, canvasEl.width, canvasEl.height);
-            keyOutGreen(imageData);
+            const keyedFraction = keyOutGreen(imageData);
             canvasCtx.putImageData(imageData, 0, 0);
+            // Plausible partial-background-removal: neither near-zero (key
+            // never matched) nor near-total (key ate the whole picture).
+            if (keyedFraction > 0.03 && keyedFraction < 0.85) {
+              goodFrameStreak++;
+              if (goodFrameStreak >= 5) canvasEl.classList.add('ready');
+            } else {
+              goodFrameStreak = 0;
+              canvasEl.classList.remove('ready');
+            }
           } catch (e) {
             chromaKeySupported = false;
-            console.warn('chroma-key disabled, falling back to raw video frame', e);
+            canvasEl.classList.remove('ready');
+            console.warn('chroma-key disabled, showing raw video instead', e);
           }
         }
       }
     } catch (e) {
-      console.warn('avatar frame draw failed', e);
+      canvasEl.classList.remove('ready');
+      console.warn('avatar frame draw failed, showing raw video instead', e);
     } finally {
       requestAnimationFrame(frame);
     }

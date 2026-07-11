@@ -7,3 +7,5 @@ services:
     envVars:
       - key: ANTHROPIC_API_KEY
         sync: false
+      - key: LIVEAVATAR_API_KEY
+        sync: false

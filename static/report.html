@@ -95,6 +95,12 @@ table.minitbl tr:nth-child(even) td{background:#f7fafc}
 <div class="wrap">
   <div class="panel">
     <h2>Ask a question</h2>
+    <div class="avatarwrap">
+      <video id="avatarVideo" autoplay playsinline></video>
+      <audio id="avatarAudio" autoplay></audio>
+      <canvas id="avatarCanvas"></canvas>
+      <div class="avatarstatus" id="avatarStatus">Loading avatar…</div>
+    </div>
     <div class="askbar">
       <input id="q" placeholder="e.g. How did Revenue perform vs budget YTD? What drove the EBITDA bridge by segment?" />
       <button id="mic" class="micbtn" title="Speak your question">🎤</button>

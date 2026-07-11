@@ -73,6 +73,11 @@ async def chat_endpoint(payload: dict = Body(...)):
     return JSONResponse(result)
 
 
+@app.post("/heygen_token")
+async def heygen_token():
+    return JSONResponse(create_session_token())
+
+
 @app.post("/export_report")
 async def export_report(payload: dict = Body(...)):
     """Accumulated chat blocks (narrative/chart/table) -> SALIC-template .pptx report."""

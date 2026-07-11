@@ -312,5 +312,132 @@ async function downloadReport(){
 }
 document.getElementById('download').onclick=downloadReport;
 </script>
+
+<script type="module">
+import { LiveAvatarSession, SessionEvent } from "https://esm.sh/@heygen/liveavatar-web-sdk@0.0.18";
+
+const GREETING = "Hi there! How are you? What are we looking at today — maybe KPIs or Budget? By the way, you can download everything as a PowerPoint report anytime using the button on the right.";
+
+let session = null, starting = null;
+const statusEl = document.getElementById('avatarStatus');
+const canvasEl = document.getElementById('avatarCanvas');
+const canvasCtx = canvasEl.getContext('2d', {willReadFrequently: true});
+
+// Chrome blocks audio autoplay before any user gesture on the page; retry
+// play() on both elements on the first click anywhere once that gesture
+// happens. Chrome specifically (not Safari) can stay silent on a <video>
+// carrying a combined audio+video WebRTC stream even after a user-gesture
+// replay, so the audio track is also split onto its own <audio> element
+// and played independently as a robust cross-browser fallback.
+function enableAudioUnlock(video, audio){
+  statusEl.textContent = 'Click anywhere to enable avatar audio';
+  const retry = () => {
+    Promise.all([video.play().catch(() => {}), audio.play().catch(() => {})]).then(() => {
+      statusEl.textContent = '';
+      document.removeEventListener('click', retry);
+    });
+  };
+  document.addEventListener('click', retry);
+}
+
+function resizeCanvas(){
+  const rect = canvasEl.parentElement.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  canvasEl.width = Math.round(rect.width * dpr);
+  canvasEl.height = Math.round(rect.height * dpr);
+}
+window.addEventListener('resize', resizeCanvas);
+
+function drawCover(video){
+  const vw = video.videoWidth, vh = video.videoHeight;
+  const cw = canvasEl.width, ch = canvasEl.height;
+  if (!vw || !vh || !cw || !ch) return;
+  const scale = Math.max(cw / vw, ch / vh);
+  const dw = vw * scale, dh = vh * scale;
+  canvasCtx.drawImage(video, (cw - dw) / 2, (ch - dh) / 2, dw, dh);
+}
+
+// Chroma-key: HeyGen video avatars render on a green-screen backdrop; key it
+// out here so the panel's own background shows through instead.
+function keyOutGreen(imageData){
+  const d = imageData.data;
+  for (let i = 0; i < d.length; i += 4) {
+    const r = d[i], g = d[i + 1], b = d[i + 2];
+    if (g > 90 && g > 1.25 * r && g > 1.25 * b) d[i + 3] = 0;
+  }
+}
+
+let chromaKeySupported = true;
+
+function startChromaKeyLoop(video){
+  resizeCanvas();
+  function frame(){
+    if (video.readyState >= 2 && video.videoWidth) {
+      drawCover(video);
+      // Some privacy/anti-fingerprinting browser extensions block or corrupt
+      // getImageData reads on canvases fed by live video, which would
+      // otherwise leave this canvas blank while audio still plays fine.
+      // Fall back to showing the raw (green-background) frame instead of
+      // nothing if that happens.
+      if (chromaKeySupported) {
+        try {
+          const imageData = canvasCtx.getImageData(0, 0, canvasEl.width, canvasEl.height);
+          keyOutGreen(imageData);
+          canvasCtx.putImageData(imageData, 0, 0);
+        } catch (e) {
+          chromaKeySupported = false;
+          console.warn('chroma-key disabled, falling back to raw video frame', e);
+        }
+      }
+    }
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+}
+
+async function getSessionToken(){
+  const r = await fetch('/heygen_token', {method:'POST'});
+  const j = await r.json();
+  const token = j.data && j.data.session_token;
+  if (!token) throw new Error(j.error || j.message || 'no session token');
+  return token;
+}
+
+async function ensureSession(){
+  if (starting) return starting;
+  if (session) return session;
+  starting = (async () => {
+    const token = await getSessionToken();
+    const s = new LiveAvatarSession(token, {voiceChat: false});
+    s.on(SessionEvent.SESSION_STREAM_READY, () => {
+      const v = document.getElementById('avatarVideo');
+      const a = document.getElementById('avatarAudio');
+      s.attach(v);
+      const audioTracks = v.srcObject ? v.srcObject.getAudioTracks() : [];
+      if (audioTracks.length) a.srcObject = new MediaStream(audioTracks);
+      Promise.all([v.play().catch(() => 'blocked'), a.play().catch(() => 'blocked')])
+        .then(results => { if (results.includes('blocked')) enableAudioUnlock(v, a); });
+      startChromaKeyLoop(v);
+    });
+    await s.start();
+    statusEl.textContent = '';
+    session = s;
+    return s;
+  })();
+  try { return await starting; } finally { starting = null; }
+}
+
+async function speakText(text){
+  const s = await ensureSession();
+  s.repeat(text);
+}
+
+window.__avatarSpeak = (text) => {
+  speakText(text).catch(e => { console.error('avatar speak failed', e); statusEl.textContent = 'Avatar unavailable'; });
+};
+window.addEventListener('beforeunload', () => { if (session) { try { session.stop(); } catch (e) {} } });
+
+speakText(GREETING).catch(e => { statusEl.textContent = 'Avatar unavailable'; console.error(e); });
+</script>
 </body>
 </html>

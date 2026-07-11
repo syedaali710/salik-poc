@@ -43,7 +43,8 @@ header.app nav a.active{color:#fff;font-weight:600;text-decoration:underline}
 @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(217,63,64,.5)}70%{box-shadow:0 0 0 10px rgba(217,63,64,0)}100%{box-shadow:0 0 0 0 rgba(217,63,64,0)}}
 .micstatus{font-size:11.5px;color:var(--muted);margin-top:6px;min-height:14px;text-align:center}
 .avatarwrap{position:relative;width:260px;height:220px;border-radius:20px;overflow:hidden;background:linear-gradient(180deg,#EEF3F8,#E6EDF4);margin:0 auto 14px;box-shadow:inset 0 0 0 1px rgba(11,77,137,.06)}
-.avatarwrap video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.avatarwrap video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:opacity .2s}
+.avatarwrap video.hide-behind-canvas{opacity:0}
 .avatarwrap canvas{position:absolute;inset:0;width:100%;height:100%;display:block;opacity:0;transition:opacity .2s}
 .avatarwrap canvas.ready{opacity:1}
 .avatarstatus{position:absolute;left:0;right:0;bottom:0;padding:6px 10px;font-size:11.5px;color:#fff;background:rgba(8,48,92,.65)}
@@ -420,20 +421,31 @@ function startChromaKeyLoop(video){
             // never matched) nor near-total (key ate the whole picture).
             if (keyedFraction > 0.03 && keyedFraction < 0.85) {
               goodFrameStreak++;
-              if (goodFrameStreak >= 5) canvasEl.classList.add('ready');
+              // The canvas sits directly on top of the video at the same
+              // position, so once it's proven to key correctly the video
+              // underneath must be hidden too — otherwise the canvas's
+              // transparent pixels just reveal the still-visible (green)
+              // video behind them instead of the page background.
+              if (goodFrameStreak >= 5) {
+                canvasEl.classList.add('ready');
+                video.classList.add('hide-behind-canvas');
+              }
             } else {
               goodFrameStreak = 0;
               canvasEl.classList.remove('ready');
+              video.classList.remove('hide-behind-canvas');
             }
           } catch (e) {
             chromaKeySupported = false;
             canvasEl.classList.remove('ready');
+            video.classList.remove('hide-behind-canvas');
             console.warn('chroma-key disabled, showing raw video instead', e);
           }
         }
       }
     } catch (e) {
       canvasEl.classList.remove('ready');
+      video.classList.remove('hide-behind-canvas');
       console.warn('avatar frame draw failed, showing raw video instead', e);
     } finally {
       requestAnimationFrame(frame);

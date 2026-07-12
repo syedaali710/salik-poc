@@ -4,6 +4,11 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>SALIC — AI Insights Chat</title>
+<link rel="modulepreload" href="https://esm.sh/@heygen/liveavatar-web-sdk@0.0.18"/>
+<script>
+// Kick off token fetch while the page paints so WebRTC connect isn't blocked on first click.
+window.__avatarTokenPrefetch = fetch('/heygen_token', {method:'POST'}).then(r => r.json()).catch(() => null);
+</script>
 <style>
 :root{
   --navy:#0B4D89; --sky:#339BD6; --green:#2A7C62; --lightgreen:#A4D5AD;
@@ -396,28 +401,26 @@ document.getElementById('download').onclick=downloadReport;
 <script type="module">
 import { LiveAvatarSession, SessionEvent } from "https://esm.sh/@heygen/liveavatar-web-sdk@0.0.18";
 
-const GREETING = "Hi there! How are you? What are we looking at today — maybe KPIs or Budget? By the way, you can download everything as a PowerPoint report anytime using the button on the right.";
+const GREETING = "Hi! Ask me about SALIC KPIs, budget, or portfolio performance — and download a PowerPoint report anytime from the panel on the right.";
 
-let session = null, starting = null, sessionAlive = false, speakChain = Promise.resolve();
+let session = null, starting = null, sessionAlive = false, streamReady = false, speakChain = Promise.resolve();
+let tokenPrefetch = window.__avatarTokenPrefetch || null;
 const statusEl = document.getElementById('avatarStatus');
 const canvasEl = document.getElementById('avatarCanvas');
 const canvasCtx = canvasEl.getContext('2d', {willReadFrequently: true});
 
-// Chrome blocks audio autoplay before any user gesture on the page; retry
-// play() on both elements on the first click anywhere once that gesture
-// happens. Chrome specifically (not Safari) can stay silent on a <video>
-// carrying a combined audio+video WebRTC stream even after a user-gesture
-// replay, so the audio track is also split onto its own <audio> element
-// and played independently as a robust cross-browser fallback.
+// Browsers may still block audio until a gesture; this only retries playback, not the greeting.
 function enableAudioUnlock(video, audio){
-  statusEl.textContent = 'Click anywhere to enable avatar audio';
+  statusEl.textContent = 'Tap anywhere if you don\'t hear the avatar';
   const retry = () => {
     Promise.all([video.play().catch(() => {}), audio.play().catch(() => {})]).then(() => {
-      statusEl.textContent = '';
+      if (!statusEl.textContent.includes('unavailable')) statusEl.textContent = '';
       document.removeEventListener('click', retry);
+      document.removeEventListener('keydown', retry);
     });
   };
   document.addEventListener('click', retry);
+  document.addEventListener('keydown', retry);
 }
 
 function resizeCanvas(){
@@ -477,7 +480,7 @@ function startChromaKeyLoop(video){
   let everReady = false;
   const fallbackTimer = setTimeout(() => {
     if (!everReady) video.classList.add('fallback-visible');
-  }, 2000);
+  }, 900);
   function frame(){
     // The whole body is wrapped in try/finally so a draw/read failure on any
     // single frame can never permanently kill the loop — otherwise one
@@ -527,8 +530,15 @@ function startChromaKeyLoop(video){
 }
 
 async function getSessionToken(){
-  const r = await fetch('/heygen_token', {method:'POST'});
-  const j = await r.json();
+  let j;
+  if (tokenPrefetch) {
+    j = await tokenPrefetch;
+    tokenPrefetch = null;
+  }
+  if (!j || !(j.data && j.data.session_token)) {
+    const r = await fetch('/heygen_token', {method:'POST'});
+    j = await r.json();
+  }
   const token = j.data && j.data.session_token;
   if (!token) throw new Error(j.error || j.message || 'no session token');
   return token;
@@ -536,6 +546,7 @@ async function getSessionToken(){
 
 function resetSession(){
   sessionAlive = false;
+  streamReady = false;
   const old = session;
   session = null;
   if (old) {
@@ -548,29 +559,50 @@ function isSessionDeadError(e){
   return /not connected|Session needs to be connected|Session is not connected/i.test(msg);
 }
 
+let greeted = false;
+function playGreetingOnce(s){
+  if (greeted) return;
+  greeted = true;
+  try {
+    s.repeat(GREETING);
+  } catch (e) {
+    speakText(GREETING).catch(err => {
+      statusEl.textContent = 'Avatar unavailable';
+      console.error(err);
+    });
+  }
+}
+
 async function createSession(){
+  statusEl.textContent = 'Connecting avatar…';
   const token = await getSessionToken();
   const s = new LiveAvatarSession(token, {voiceChat: false});
   s.on(SessionEvent.SESSION_STREAM_READY, () => {
+    streamReady = true;
     const v = document.getElementById('avatarVideo');
     const a = document.getElementById('avatarAudio');
     s.attach(v);
     const audioTracks = v.srcObject ? v.srcObject.getAudioTracks() : [];
     if (audioTracks.length) a.srcObject = new MediaStream(audioTracks);
     Promise.all([v.play().catch(() => 'blocked'), a.play().catch(() => 'blocked')])
-      .then(results => { if (results.includes('blocked')) enableAudioUnlock(v, a); });
+      .then(results => {
+        if (results.includes('blocked')) enableAudioUnlock(v, a);
+        else if (!statusEl.textContent.includes('unavailable')) statusEl.textContent = '';
+      });
     startChromaKeyLoop(v);
+    playGreetingOnce(s);
   });
   s.on(SessionEvent.SESSION_DISCONNECTED, () => {
     if (session === s) {
       session = null;
       sessionAlive = false;
+      streamReady = false;
     }
   });
   await s.start();
   session = s;
   sessionAlive = true;
-  statusEl.textContent = '';
+  if (streamReady && !statusEl.textContent.includes('Tap')) statusEl.textContent = '';
   return s;
 }
 
@@ -611,19 +643,13 @@ window.__avatarSpeak = (text) => {
 };
 window.addEventListener('beforeunload', () => resetSession());
 
-// Greeting after first user gesture so autoplay + session aren't wasted on a tab
-// that may idle out before the user interacts (common on Render / mobile).
-let greeted = false;
-function maybeGreet(){
-  if (greeted) return;
-  greeted = true;
-  speakText(GREETING).catch(e => {
-    statusEl.textContent = 'Avatar unavailable';
-    console.error(e);
-  });
-}
-document.addEventListener('click', maybeGreet, {once: true});
-document.getElementById('mic').addEventListener('click', maybeGreet, {once: true});
+// Connect and greet automatically on load.
+ensureSession().catch(e => {
+  console.warn('avatar connect failed, will retry on next speak', e);
+  if (!statusEl.textContent.includes('Tap')) {
+    statusEl.textContent = 'Avatar will connect when you ask a question';
+  }
+});
 </script>
 </body>
 </html>

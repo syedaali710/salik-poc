@@ -398,7 +398,7 @@ import { LiveAvatarSession, SessionEvent } from "https://esm.sh/@heygen/liveavat
 
 const GREETING = "Hi there! How are you? What are we looking at today — maybe KPIs or Budget? By the way, you can download everything as a PowerPoint report anytime using the button on the right.";
 
-let session = null, starting = null;
+let session = null, starting = null, sessionAlive = false, speakChain = Promise.resolve();
 const statusEl = document.getElementById('avatarStatus');
 const canvasEl = document.getElementById('avatarCanvas');
 const canvasCtx = canvasEl.getContext('2d', {willReadFrequently: true});
@@ -534,41 +534,96 @@ async function getSessionToken(){
   return token;
 }
 
-async function ensureSession(){
-  if (starting) return starting;
-  if (session) return session;
-  starting = (async () => {
-    const token = await getSessionToken();
-    const s = new LiveAvatarSession(token, {voiceChat: false});
-    s.on(SessionEvent.SESSION_STREAM_READY, () => {
-      const v = document.getElementById('avatarVideo');
-      const a = document.getElementById('avatarAudio');
-      s.attach(v);
-      const audioTracks = v.srcObject ? v.srcObject.getAudioTracks() : [];
-      if (audioTracks.length) a.srcObject = new MediaStream(audioTracks);
-      Promise.all([v.play().catch(() => 'blocked'), a.play().catch(() => 'blocked')])
-        .then(results => { if (results.includes('blocked')) enableAudioUnlock(v, a); });
-      startChromaKeyLoop(v);
-    });
-    await s.start();
-    statusEl.textContent = '';
-    session = s;
-    return s;
-  })();
-  try { return await starting; } finally { starting = null; }
+function resetSession(){
+  sessionAlive = false;
+  const old = session;
+  session = null;
+  if (old) {
+    try { old.stop(); } catch (_) {}
+  }
 }
 
-async function speakText(text){
-  const s = await ensureSession();
-  s.repeat(text);
+function isSessionDeadError(e){
+  const msg = String((e && e.message) || e || '');
+  return /not connected|Session needs to be connected|Session is not connected/i.test(msg);
+}
+
+async function createSession(){
+  const token = await getSessionToken();
+  const s = new LiveAvatarSession(token, {voiceChat: false});
+  s.on(SessionEvent.SESSION_STREAM_READY, () => {
+    const v = document.getElementById('avatarVideo');
+    const a = document.getElementById('avatarAudio');
+    s.attach(v);
+    const audioTracks = v.srcObject ? v.srcObject.getAudioTracks() : [];
+    if (audioTracks.length) a.srcObject = new MediaStream(audioTracks);
+    Promise.all([v.play().catch(() => 'blocked'), a.play().catch(() => 'blocked')])
+      .then(results => { if (results.includes('blocked')) enableAudioUnlock(v, a); });
+    startChromaKeyLoop(v);
+  });
+  s.on(SessionEvent.SESSION_DISCONNECTED, () => {
+    if (session === s) {
+      session = null;
+      sessionAlive = false;
+    }
+  });
+  await s.start();
+  session = s;
+  sessionAlive = true;
+  statusEl.textContent = '';
+  return s;
+}
+
+async function ensureSession(forceNew = false){
+  if (forceNew) resetSession();
+  if (starting) return starting;
+  if (session && sessionAlive) return session;
+  resetSession();
+  starting = createSession();
+  try { return await starting; }
+  finally { starting = null; }
+}
+
+async function speakText(text, allowRetry = true){
+  const trimmed = (text || '').trim();
+  if (!trimmed) return;
+  try {
+    const s = await ensureSession();
+    s.repeat(trimmed);
+  } catch (e) {
+    if (allowRetry && isSessionDeadError(e)) {
+      resetSession();
+      const s = await ensureSession(true);
+      s.repeat(trimmed);
+      return;
+    }
+    throw e;
+  }
 }
 
 window.__avatarSpeak = (text) => {
-  speakText(text).catch(e => { console.error('avatar speak failed', e); statusEl.textContent = 'Avatar unavailable'; });
+  speakChain = speakChain
+    .then(() => speakText(text))
+    .catch(e => {
+      console.error('avatar speak failed', e);
+      statusEl.textContent = 'Avatar unavailable — click Ask again to reconnect';
+    });
 };
-window.addEventListener('beforeunload', () => { if (session) { try { session.stop(); } catch (e) {} } });
+window.addEventListener('beforeunload', () => resetSession());
 
-speakText(GREETING).catch(e => { statusEl.textContent = 'Avatar unavailable'; console.error(e); });
+// Greeting after first user gesture so autoplay + session aren't wasted on a tab
+// that may idle out before the user interacts (common on Render / mobile).
+let greeted = false;
+function maybeGreet(){
+  if (greeted) return;
+  greeted = true;
+  speakText(GREETING).catch(e => {
+    statusEl.textContent = 'Avatar unavailable';
+    console.error(e);
+  });
+}
+document.addEventListener('click', maybeGreet, {once: true});
+document.getElementById('mic').addEventListener('click', maybeGreet, {once: true});
 </script>
 </body>
 </html>

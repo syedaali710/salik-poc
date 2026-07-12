@@ -3,7 +3,7 @@ name = "salic-ai-insights"
 version = "0.1.0"
 description = "SALIC AI Insights — grounded financial chat, avatar, and PPTX report export"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = "==3.12.*"
 dependencies = [
     "fastapi==0.111.0",
     "uvicorn==0.30.1",

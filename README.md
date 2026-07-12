@@ -73,12 +73,29 @@ Pydantic models live in `schemas.py`.
 
 ## Docker / Render
 
+**Option A — Native Python (matches current Render dashboard)**
+
+In Render → your service → Settings, use:
+
+| Setting | Value |
+|---------|--------|
+| Runtime | Python |
+| Build Command | `pip install -r requirements.txt` |
+| Start Command | `uvicorn app:app --host 0.0.0.0 --port $PORT` |
+| Python Version | `3.11.14` (not 3.14 — faster-whisper needs 3.11) |
+
+`render.yaml` in the repo is configured for this layout. Push to `salikavatar` and redeploy.
+
+**Option B — Docker**
+
 ```bash
 docker build -t salic-ai-insights .
 docker run --rm -p 8000:8000 -e ANTHROPIC_API_KEY=… -e LIVEAVATAR_API_KEY=… salic-ai-insights
 ```
 
-`render.yaml` deploys the Docker image as `salic-ai-insights`.
+In Render, set **Environment → Docker** and point at `./Dockerfile` (uses `uv sync` inside the image).
+
+Set `ANTHROPIC_API_KEY` and `LIVEAVATAR_API_KEY` in Render environment variables.
 
 ---
 

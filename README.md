@@ -1,6 +1,6 @@
 # SALIC AI Insights
 
-Ask about SALIC group financials (voice or text) → local Whisper transcription →
+Ask about SALIC group financials (voice or text) → ElevenLabs Speech-to-Text →
 Claude answers grounded in `data/dashboard_data.json` → optional chart/table →
 LiveAvatar speaks the answer → download a SALIC-branded PowerPoint report.
 
@@ -30,8 +30,10 @@ Double-click **`START_HERE.command`** (right-click → Open the first time if ma
 | Variable | Required | Purpose |
 |----------|----------|---------|
 | `ANTHROPIC_API_KEY` | Yes (chat) | Claude Q&A |
+| `ELEVENLABS_API_KEY` | Yes (mic) | [ElevenLabs Speech-to-Text](https://elevenlabs.io/docs/eleven-api/guides/cookbooks/speech-to-text) (`scribe_v2`) |
 | `LIVEAVATAR_API_KEY` | Optional | LiveAvatar speech |
-| `WHISPER_MODEL` | No | `tiny` (default) / `base` / `small` / `medium` |
+| `ELEVENLABS_STT_MODEL` | No | Default `scribe_v2` |
+| `ELEVENLABS_STT_LANGUAGE` | No | ISO language hint (e.g. `eng`); omit for auto-detect |
 | `PORT` | No | Default `8000` |
 
 Keys can also live in a local `.env` file (never commit it).
@@ -45,7 +47,7 @@ Interactive docs: **http://localhost:8000/docs**
 | Method | Path | Body | Role |
 |--------|------|------|------|
 | `GET` | `/`, `/report` | — | Serves the chat UI |
-| `POST` | `/transcribe` | `multipart/form-data` (`audio`) | Mic → Whisper transcript |
+| `POST` | `/transcribe` | `multipart/form-data` (`audio`) | Mic → ElevenLabs STT transcript |
 | `POST` | `/chat` | `{ question, history[] }` | Grounded answer + chart/table (one shot) |
 | `POST` | `/chat/stream` | same | SSE: `delta` text chunks, then `done` with chart/table |
 | `POST` | `/heygen_token` | — | LiveAvatar session token |
@@ -59,7 +61,8 @@ Pydantic models live in `schemas.py`.
 
 | File | Role |
 |------|------|
-| `app.py` | FastAPI app, lifespan Whisper preload, routers |
+| `app.py` | FastAPI app and routers |
+| `elevenlabs_stt.py` | ElevenLabs Speech-to-Text (`/transcribe`) |
 | `schemas.py` | Request/response models |
 | `chat.py` | Claude Q&A over `dashboard_data.json` |
 | `heygen.py` | LiveAvatar session token minting |
@@ -73,43 +76,33 @@ Pydantic models live in `schemas.py`.
 
 ## Deploy on Render
 
-**Use Docker** (recommended). Native Python + `uv sync` on Render defaults to **Python 3.14**, which has no prebuilt `av` wheel for `faster-whisper` and the build fails without FFmpeg dev libraries.
+**Use Docker** (recommended). The app no longer needs local Whisper/ffmpeg — mic transcription calls ElevenLabs in the cloud.
 
 ### Render dashboard settings
 
-1. **New → Web Service** → connect `syedaali710/salik-poc`, branch **`salikavatar`**
-2. **Environment → Docker** (not Python)
+1. **New → Web Service** → connect repo, branch **`salikavatar`**
+2. **Environment → Docker**
 3. **Dockerfile Path:** `./Dockerfile`
-4. **Instance:** Free (or paid for more RAM — Whisper is heavy)
-5. **Environment variables:**
+4. **Environment variables:**
 
 | Key | Value |
 |-----|--------|
 | `ANTHROPIC_API_KEY` | your key |
+| `ELEVENLABS_API_KEY` | your [ElevenLabs API key](https://elevenlabs.io/app/settings/api-keys) |
 | `LIVEAVATAR_API_KEY` | your key (optional) |
-| `WHISPER_MODEL` | `tiny` |
 
-6. **Do not** set a custom Build Command — Docker uses the Dockerfile
-7. Deploy → open `https://<your-service>.onrender.com`
+5. Deploy → open `https://<your-service>.onrender.com`
 
-### If you must use Native Python (not recommended)
+### Native Python (also works now)
 
 | Setting | Value |
 |---------|--------|
 | Runtime | Python |
-| **Python Version** | **`3.11.14`** (required — not 3.14) |
+| Python Version | `3.11.14` |
 | Build Command | `pip install -r requirements.txt` |
 | Start Command | `uvicorn app:app --host 0.0.0.0 --port $PORT` |
-| Env `PYTHON_VERSION` | `3.11.14` |
 
-Do **not** use `uv sync --frozen` on native Python unless you also install FFmpeg system packages (not available on Render native builds).
-
-### Local Docker test
-
-```bash
-docker build -t salic-ai-insights .
-docker run --rm -p 8000:8000 -e ANTHROPIC_API_KEY=… -e LIVEAVATAR_API_KEY=… salic-ai-insights
-```
+No `faster-whisper`, no ffmpeg, no `uv sync` required on Render.
 
 ---
 

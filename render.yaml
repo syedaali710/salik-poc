@@ -9,5 +9,5 @@ services:
         sync: false
       - key: LIVEAVATAR_API_KEY
         sync: false
-      - key: WHISPER_MODEL
-        value: tiny
+      - key: ELEVENLABS_API_KEY
+        sync: false

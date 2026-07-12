@@ -1,14 +1,13 @@
 services:
   - type: web
     name: salic-ai-insights
-    runtime: python
+    env: docker
+    dockerfilePath: ./Dockerfile
     plan: free
-    buildCommand: pip install -r requirements.txt
-    startCommand: uvicorn app:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: ANTHROPIC_API_KEY
         sync: false
       - key: LIVEAVATAR_API_KEY
         sync: false
-      - key: PYTHON_VERSION
-        value: "3.11.14"
+      - key: WHISPER_MODEL
+        value: tiny

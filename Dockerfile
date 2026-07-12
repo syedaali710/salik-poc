@@ -1,6 +1,10 @@
 # syntax=docker/dockerfile:1
 FROM python:3.11-slim
 
+# faster-whisper / av need ffmpeg at runtime; prebuilt av wheels target py3.11
+RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg \
+    && rm -rf /var/lib/apt/lists/*
+
 COPY --from=ghcr.io/astral-sh/uv:0.9.15 /uv /uvx /bin/
 
 WORKDIR /app

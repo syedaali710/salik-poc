@@ -71,31 +71,45 @@ Pydantic models live in `schemas.py`.
 
 ---
 
-## Docker / Render
+## Deploy on Render
 
-**Option A — Native Python (matches current Render dashboard)**
+**Use Docker** (recommended). Native Python + `uv sync` on Render defaults to **Python 3.14**, which has no prebuilt `av` wheel for `faster-whisper` and the build fails without FFmpeg dev libraries.
 
-In Render → your service → Settings, use:
+### Render dashboard settings
+
+1. **New → Web Service** → connect `syedaali710/salik-poc`, branch **`salikavatar`**
+2. **Environment → Docker** (not Python)
+3. **Dockerfile Path:** `./Dockerfile`
+4. **Instance:** Free (or paid for more RAM — Whisper is heavy)
+5. **Environment variables:**
+
+| Key | Value |
+|-----|--------|
+| `ANTHROPIC_API_KEY` | your key |
+| `LIVEAVATAR_API_KEY` | your key (optional) |
+| `WHISPER_MODEL` | `tiny` |
+
+6. **Do not** set a custom Build Command — Docker uses the Dockerfile
+7. Deploy → open `https://<your-service>.onrender.com`
+
+### If you must use Native Python (not recommended)
 
 | Setting | Value |
 |---------|--------|
 | Runtime | Python |
+| **Python Version** | **`3.11.14`** (required — not 3.14) |
 | Build Command | `pip install -r requirements.txt` |
 | Start Command | `uvicorn app:app --host 0.0.0.0 --port $PORT` |
-| Python Version | `3.11.14` (not 3.14 — faster-whisper needs 3.11) |
+| Env `PYTHON_VERSION` | `3.11.14` |
 
-`render.yaml` in the repo is configured for this layout. Push to `salikavatar` and redeploy.
+Do **not** use `uv sync --frozen` on native Python unless you also install FFmpeg system packages (not available on Render native builds).
 
-**Option B — Docker**
+### Local Docker test
 
 ```bash
 docker build -t salic-ai-insights .
 docker run --rm -p 8000:8000 -e ANTHROPIC_API_KEY=… -e LIVEAVATAR_API_KEY=… salic-ai-insights
 ```
-
-In Render, set **Environment → Docker** and point at `./Dockerfile` (uses `uv sync` inside the image).
-
-Set `ANTHROPIC_API_KEY` and `LIVEAVATAR_API_KEY` in Render environment variables.
 
 ---
 

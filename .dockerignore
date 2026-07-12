@@ -6,7 +6,6 @@ __pycache__
 .claude
 .env
 data/*.pdf
-requirements.txt
 parsing.py
 START_HERE.command
 README.md

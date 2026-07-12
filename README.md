@@ -1,33 +1,57 @@
-# SALIC Voice → Slide (local POC)
+# SALIC AI Insights
 
-Speak a finance update → it is **transcribed on your own machine** by Whisper →
-mapped onto the **SALIC template** as an editable **PowerPoint** slide with a KPI table.
-No cloud, no API keys, no data leaves your computer.
+Ask about SALIC group financials (voice or text) → local Whisper transcription →
+Claude answers grounded in `data/dashboard_data.json` → optional chart/table →
+LiveAvatar speaks the answer → download a SALIC-branded PowerPoint report.
+
+Managed with **[uv](https://docs.astral.sh/uv/)** and served by **FastAPI**.
 
 ---
 
-## Run it (macOS — simplest path)
+## Run it (any OS)
 
-1. Make sure **Python 3** is installed. (Check: open Terminal, type `python3 --version`.
-   If missing, install from https://www.python.org/downloads/ or run `xcode-select --install`.)
-2. Double-click **`START_HERE.command`**.
-   - macOS may say *"unidentified developer"* the first time → right-click the file →
-     **Open** → **Open**.
-3. The first run installs things and downloads the Whisper model (a few minutes, one time).
-4. Your browser opens at **http://localhost:8000**. Click the mic, allow the microphone,
-   speak your update, press stop. Edit any field, then **Download PowerPoint**.
-5. To stop: close the black Terminal window (or press `Ctrl+C` in it).
-
-## Run it (any OS — manual)
+1. Install [uv](https://docs.astral.sh/uv/getting-started/installation/).
+2. From this folder:
 
 ```bash
-cd salic-voice-poc
-python3 -m venv .venv
-source .venv/bin/activate            # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
-python -m uvicorn app:app --port 8000
-# open http://localhost:8000
+uv sync
+uv run uvicorn app:app --host 127.0.0.1 --port 8000
 ```
+
+3. Open **http://localhost:8000**. Click the mic (or type), ask a question, then
+   download the report from the sidebar.
+
+### macOS one-click
+
+Double-click **`START_HERE.command`** (right-click → Open the first time if macOS blocks it).
+
+### Environment
+
+| Variable | Required | Purpose |
+|----------|----------|---------|
+| `ANTHROPIC_API_KEY` | Yes (chat) | Claude Q&A |
+| `LIVEAVATAR_API_KEY` | Optional | LiveAvatar speech |
+| `WHISPER_MODEL` | No | `tiny` (default) / `base` / `small` / `medium` |
+| `PORT` | No | Default `8000` |
+
+Keys can also live in a local `.env` file (never commit it).
+
+---
+
+## API (FastAPI)
+
+Interactive docs: **http://localhost:8000/docs**
+
+| Method | Path | Body | Role |
+|--------|------|------|------|
+| `GET` | `/`, `/report` | — | Serves the chat UI |
+| `POST` | `/transcribe` | `multipart/form-data` (`audio`) | Mic → Whisper transcript |
+| `POST` | `/chat` | `{ question, history[] }` | Grounded answer + chart/table (one shot) |
+| `POST` | `/chat/stream` | same | SSE: `delta` text chunks, then `done` with chart/table |
+| `POST` | `/heygen_token` | — | LiveAvatar session token |
+| `POST` | `/export_report` | `{ company, period, blocks[] }` | PPTX download |
+
+Pydantic models live in `schemas.py`.
 
 ---
 
@@ -35,30 +59,34 @@ python -m uvicorn app:app --port 8000
 
 | File | Role |
 |------|------|
-| `app.py` | Backend server. Endpoints: `/transcribe` (mic→Whisper), `/parse`, `/generate` (→.pptx) |
-| `parsing.py` | Turns the transcript into slide fields (company, period, KPIs, commentary) |
-| `pptx_builder.py` | Builds the slide with python-pptx, using the official SALIC template as its base |
-| `assets/SALIC_template.pptx` | Official SALIC PowerPoint template — supplies the real theme, logo, and layout |
-| `static/index.html` | The web page: mic recorder, editable fields, live slide preview |
-| `START_HERE.command` | One-click launcher for macOS |
+| `app.py` | FastAPI app, lifespan Whisper preload, routers |
+| `schemas.py` | Request/response models |
+| `chat.py` | Claude Q&A over `dashboard_data.json` |
+| `heygen.py` | LiveAvatar session token minting |
+| `pptx_builder.py` | SALIC-template PowerPoint assembly |
+| `planner.py` | Shared chart-spec validation (+ legacy Groq planner) |
+| `static/report.html` | Chat + avatar + report UI |
+| `data/dashboard_data.json` | YTD Dec-2025 Power BI snapshot |
+| `pyproject.toml` / `uv.lock` | Dependencies (uv) |
 
-## Tips for good results
-- Speak numbers as **digits**: say "two fifty" as **"250"**, "one point one eight billion" as **"1,180 million"**.
-- Mention the **company name** and the **period** ("NADEC", "Q1 2025").
-- The parser is deliberately simple — **every field is editable** before you download.
-- Change model size for speed/accuracy: set `WHISPER_MODEL=tiny` (fast) or `medium` (accurate)
-  before launching, e.g. `WHISPER_MODEL=base python -m uvicorn app:app --port 8000`.
+---
+
+## Docker / Render
+
+```bash
+docker build -t salic-ai-insights .
+docker run --rm -p 8000:8000 -e ANTHROPIC_API_KEY=… -e LIVEAVATAR_API_KEY=… salic-ai-insights
+```
+
+`render.yaml` deploys the Docker image as `salic-ai-insights`.
 
 ---
 
 ## Moving to production (Azure)
-This POC is built so production is a small swap, not a rewrite:
 
-1. **Transcription** — replace the body of `transcribe_audio()` in `app.py` with a call to
-   **Azure Whisper** (Azure OpenAI) in your tenant. Instructions are in the code comment.
-2. **Numbers** — instead of parsing figures from speech, pull the verified KPIs from
-   **Microsoft Fabric / Power BI** (read-only). Speech/AI then only writes the narrative.
-3. **Hosting & security** — run inside SALIC's Azure (private networking, Entra ID sign-in,
-   audit logs). Nothing else in the app changes.
+1. **Transcription** — swap local Whisper for Azure Whisper in your tenant.
+2. **Numbers** — pull verified KPIs from Microsoft Fabric / Power BI (read-only);
+   speech/AI only writes the narrative.
+3. **Hosting** — private networking, Entra ID, audit logs.
 
-*Prototype for demonstration. Numbers spoken in the demo are illustrative, not real financials.*
+*Prototype for demonstration. Figures in the demo dataset are illustrative.*

@@ -58,6 +58,8 @@ header.app nav a.active{color:#fff;font-weight:600;text-decoration:underline}
 .msg.user{background:var(--lightblue);align-self:flex-end;max-width:75%;font-size:14px}
 .msg.ai{background:#fff;border:1px solid var(--line)}
 .msg.ai .ans{font-size:14.5px;line-height:1.5;white-space:pre-wrap}
+.msg.ai .ans.streaming::after{content:"";display:inline-block;width:7px;height:1.05em;margin-left:2px;background:var(--navy);vertical-align:text-bottom;animation:blink 1s step-end infinite}
+@keyframes blink{50%{opacity:0}}
 .msg.ai .addedtag{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;color:var(--green);margin-top:8px;font-weight:600}
 .msg.err{background:#fdecec;border:1px solid #f3caca;color:#8a2b2b;font-size:13.5px}
 
@@ -233,21 +235,41 @@ function addUserMsg(q){
   chat.appendChild(d); chat.scrollTop=chat.scrollHeight;
 }
 
-function addAiMsg(result){
+function isUsableAnswer(result){
+  if(!result||result.ok===false) return false;
+  const a=(result.answer||'').trim();
+  if(!a) return false;
+  // Backend soft-failures still return HTTP 200 with an apology string
+  return !/^(Sorry, that answer got cut off|Sorry, I couldn't reach|Sorry, I got an empty|AI backend is not configured)/i.test(a);
+}
+
+function beginAiMsg(){
   const chat=document.getElementById('chat');
   const d=document.createElement('div'); d.className='msg ai';
-  let html=`<div class="ans"></div>`;
+  d.innerHTML=`<div class="ans streaming"></div><div class="extras"></div><div class="tagwrap"></div>`;
+  chat.appendChild(d); chat.scrollTop=chat.scrollHeight;
+  return d;
+}
+
+function finalizeAiMsg(bubble, result){
+  const usable=isUsableAnswer(result);
+  const ans=bubble.querySelector('.ans');
+  const extras=bubble.querySelector('.extras');
+  const tagwrap=bubble.querySelector('.tagwrap');
+  ans.classList.remove('streaming');
+  ans.textContent=result.answer||'';
+  if(!usable){
+    bubble.className='msg err';
+    bubble.textContent=result.answer||'Something went wrong.';
+    return;
+  }
+  let html='';
   if(result.chart) html+=renderMiniChart(result.chart);
   if(result.table) html+=renderMiniTable(result.table);
-  html+=`<div><span class="addedtag" style="display:none">✓ added to report</span></div>`;
-  d.innerHTML=html;
-  d.querySelector('.ans').textContent=result.answer;
-  chat.appendChild(d);
-  chat.scrollTop=chat.scrollHeight;
-
-  // simple flow: every answered question is auto-added to the report
+  extras.innerHTML=html;
+  tagwrap.innerHTML=`<span class="addedtag">✓ added to report</span>`;
   addToReport(result);
-  d.querySelector('.addedtag').style.display='inline-flex';
+  document.getElementById('chat').scrollTop=document.getElementById('chat').scrollHeight;
 }
 
 function addErrMsg(text){
@@ -276,6 +298,31 @@ function renderReportList(){
   host.querySelectorAll('.rm').forEach(el=>el.onclick=()=>removeReportItem(parseInt(el.dataset.i)));
 }
 
+async function readSse(response, onEvent){
+  const reader=response.body.getReader();
+  const decoder=new TextDecoder();
+  let buf='';
+  while(true){
+    const {done, value}=await reader.read();
+    if(done) break;
+    buf+=decoder.decode(value,{stream:true});
+    const chunks=buf.split('\n\n');
+    buf=chunks.pop();
+    for(const chunk of chunks){
+      if(!chunk.trim()) continue;
+      let event='message', data='';
+      for(const line of chunk.split('\n')){
+        if(line.startsWith('event:')) event=line.slice(6).trim();
+        else if(line.startsWith('data:')) data=line.slice(5).trim();
+      }
+      if(!data) continue;
+      let parsed;
+      try{ parsed=JSON.parse(data); }catch(e){ continue; }
+      onEvent(event, parsed);
+    }
+  }
+}
+
 async function ask(){
   const input=document.getElementById('q');
   const q=input.value.trim();
@@ -284,16 +331,33 @@ async function ask(){
   document.getElementById('ask').disabled=true;
   addUserMsg(q);
   input.value='';
+  const bubble=beginAiMsg();
+  const ansEl=bubble.querySelector('.ans');
+  const chat=document.getElementById('chat');
+  let final=null;
   try{
-    const r=await fetch('/chat',{method:'POST',headers:{'Content-Type':'application/json'},
+    const r=await fetch('/chat/stream',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({question:q, history:HISTORY})});
     if(!r.ok)throw new Error("server "+r.status);
-    const j=await r.json();
+    await readSse(r,(event, data)=>{
+      const type=data.type||event;
+      if(type==='delta' && data.text){
+        ansEl.textContent+=data.text;
+        chat.scrollTop=chat.scrollHeight;
+      }else if(type==='done'){
+        final=data;
+      }
+    });
+    if(!final){
+      final={answer:ansEl.textContent||'Sorry, I got an empty reply from the AI. Please try again.',
+             chart:null, table:null, ok:!!ansEl.textContent};
+    }
     HISTORY.push({role:'user',content:q});
-    HISTORY.push({role:'assistant',content:j.answer});
-    addAiMsg(j);
-    if(window.__avatarSpeak) window.__avatarSpeak(j.answer);
+    HISTORY.push({role:'assistant',content:final.answer});
+    finalizeAiMsg(bubble, final);
+    if(isUsableAnswer(final) && window.__avatarSpeak) window.__avatarSpeak(final.answer);
   }catch(e){
+    bubble.remove();
     addErrMsg("Couldn't get an answer: "+e.message);
   }
   asking=false;

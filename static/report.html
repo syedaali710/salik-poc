@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- RETIRED: UI moved to salic-frontend (Next.js). Backend / and /report redirect to FRONTEND_URL. -->
+<!-- Legacy static UI served from FastAPI at / and /report for latency testing. -->
 <html lang="en">
 <head>
 <meta charset="utf-8"/>
@@ -126,7 +126,6 @@ table.minitbl tr:nth-child(even) td{background:#f7fafc}
     <h2>Ask a question</h2>
     <div class="avatarwrap">
       <video id="avatarVideo" autoplay playsinline></video>
-      <audio id="avatarAudio" autoplay></audio>
       <canvas id="avatarCanvas"></canvas>
       <div class="avatarstatus" id="avatarStatus">Loading avatar…</div>
     </div>
@@ -464,10 +463,10 @@ const canvasEl = document.getElementById('avatarCanvas');
 const canvasCtx = canvasEl.getContext('2d', {willReadFrequently: true});
 
 // Browsers may still block audio until a gesture; this only retries playback, not the greeting.
-function enableAudioUnlock(video, audio){
+function enableAudioUnlock(video){
   statusEl.textContent = 'Tap anywhere if you don\'t hear the avatar';
   const retry = () => {
-    Promise.all([video.play().catch(() => {}), audio.play().catch(() => {})]).then(() => {
+    video.play().catch(() => {}).then(() => {
       if (!statusEl.textContent.includes('unavailable')) statusEl.textContent = '';
       document.removeEventListener('click', retry);
       document.removeEventListener('keydown', retry);
@@ -479,7 +478,8 @@ function enableAudioUnlock(video, audio){
 
 function resizeCanvas(){
   const rect = canvasEl.parentElement.getBoundingClientRect();
-  const dpr = window.devicePixelRatio || 1;
+  // Cap DPR — full retina pixel reads are the main CPU cost and cause lip drift.
+  const dpr = Math.min(window.devicePixelRatio || 1, CHROMA_MAX_DPR);
   canvasEl.width = Math.round(rect.width * dpr);
   canvasEl.height = Math.round(rect.height * dpr);
 }
@@ -511,46 +511,55 @@ function keyOutGreen(imageData){
   return keyed / total;
 }
 
-// The raw <video> is always visible underneath as the guaranteed-to-work
-// baseline (plain HTML5 video playback, works everywhere). The keyed
-// canvas is layered on top and only faded in once it's proven to produce a
-// plausible result on THIS device/browser — some browsers/phones silently
-// fail to ever produce a good keyed frame (blocked pixel reads, choked
-// on CPU, or color-shifted compressed video keying out almost everything),
-// and rather than special-case those, we just never promote the canvas and
-// the video stays visible with its natural background.
+// Chroma-key removes the green-screen backdrop. If it can't keep up with the
+// WebRTC frame rate, lips on canvas lag behind audio — so we throttle, cap
+// resolution, and fall back to the raw <video> when frames are too slow.
+const CHROMA_MAX_DPR = 1;
+const CHROMA_MAX_FPS = 24;
+const CHROMA_FRAME_BUDGET_MS = 22;
+const CHROMA_SLOW_FRAMES_BEFORE_FALLBACK = 4;
+
 let chromaKeySupported = true;
 let goodFrameStreak = 0;
+let slowFrameStreak = 0;
+let lastChromaTick = 0;
 
-// Both <video> and <canvas> start invisible (see CSS): the brief moment
-// before the first good frame just shows the panel's own soft gradient,
-// not a green flash. Two independent safety nets reveal the raw video if
-// chroma-key isn't actually working, so it's never permanently blank:
-// (1) a fixed grace period on first load, in case keying never succeeds at
-// all, and (2) an immediate reveal if it regresses after already having
-// worked (no need to wait out a grace period for something we know can fail).
+function showRawVideo(video){
+  chromaKeySupported = false;
+  goodFrameStreak = 0;
+  canvasEl.classList.remove('ready');
+  video.classList.add('fallback-visible');
+}
+
 function startChromaKeyLoop(video){
   resizeCanvas();
   let everReady = false;
   const fallbackTimer = setTimeout(() => {
-    if (!everReady) video.classList.add('fallback-visible');
+    if (!everReady) showRawVideo(video);
   }, 900);
-  function frame(){
-    // The whole body is wrapped in try/finally so a draw/read failure on any
-    // single frame can never permanently kill the loop — otherwise one
-    // thrown error would silently stop requestAnimationFrame from ever
-    // rescheduling, leaving the canvas frozen forever while audio (on its
-    // own unaffected element) kept playing.
+  function frame(now){
     try {
       if (video.readyState >= 2 && video.videoWidth) {
-        drawCover(video);
-        if (chromaKeySupported) {
+        const elapsed = now - lastChromaTick;
+        const shouldProcess = chromaKeySupported && elapsed >= (1000 / CHROMA_MAX_FPS);
+        if (shouldProcess) {
+          const t0 = performance.now();
+          drawCover(video);
           try {
             const imageData = canvasCtx.getImageData(0, 0, canvasEl.width, canvasEl.height);
             const keyedFraction = keyOutGreen(imageData);
             canvasCtx.putImageData(imageData, 0, 0);
-            // Plausible partial-background-removal: neither near-zero (key
-            // never matched) nor near-total (key ate the whole picture).
+            lastChromaTick = now;
+            const frameMs = performance.now() - t0;
+            if (frameMs > CHROMA_FRAME_BUDGET_MS) {
+              slowFrameStreak++;
+              if (slowFrameStreak >= CHROMA_SLOW_FRAMES_BEFORE_FALLBACK) {
+                console.warn('chroma-key too slow, using raw video for A/V sync');
+                showRawVideo(video);
+              }
+            } else {
+              slowFrameStreak = 0;
+            }
             if (keyedFraction > 0.03 && keyedFraction < 0.85) {
               goodFrameStreak++;
               if (goodFrameStreak >= 3) {
@@ -562,20 +571,17 @@ function startChromaKeyLoop(video){
             } else {
               goodFrameStreak = 0;
               canvasEl.classList.remove('ready');
-              if (everReady) video.classList.add('fallback-visible');
+              if (everReady) showRawVideo(video);
             }
           } catch (e) {
-            chromaKeySupported = false;
-            canvasEl.classList.remove('ready');
-            video.classList.add('fallback-visible');
             console.warn('chroma-key disabled, showing raw video instead', e);
+            showRawVideo(video);
           }
         }
       }
     } catch (e) {
-      canvasEl.classList.remove('ready');
-      video.classList.add('fallback-visible');
       console.warn('avatar frame draw failed, showing raw video instead', e);
+      showRawVideo(video);
     } finally {
       requestAnimationFrame(frame);
     }
@@ -669,13 +675,12 @@ async function createSession(){
   s.on(SessionEvent.SESSION_STREAM_READY, () => {
     streamReady = true;
     const v = document.getElementById('avatarVideo');
-    const a = document.getElementById('avatarAudio');
     s.attach(v);
-    const audioTracks = v.srcObject ? v.srcObject.getAudioTracks() : [];
-    if (audioTracks.length) a.srcObject = new MediaStream(audioTracks);
-    Promise.all([v.play().catch(() => 'blocked'), a.play().catch(() => 'blocked')])
-      .then(results => {
-        if (results.includes('blocked')) enableAudioUnlock(v, a);
+    // Keep audio on the same <video> element as the picture — splitting to a
+    // separate <audio> tag can drift; chroma canvas lag was also desyncing lips.
+    v.play().catch(() => 'blocked')
+      .then(result => {
+        if (result === 'blocked') enableAudioUnlock(v);
         else if (!statusEl.textContent.includes('unavailable')) statusEl.textContent = '';
       });
     startChromaKeyLoop(v);

@@ -14,7 +14,7 @@ from typing import Any
 
 from fastapi import APIRouter, FastAPI, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import RedirectResponse, StreamingResponse
+from fastapi.responses import FileResponse, StreamingResponse
 
 from chat import answer_question, stream_answer_question
 from elevenlabs_stt import transcribe_audio_bytes
@@ -47,14 +47,14 @@ api = APIRouter(tags=["api"])
 pages = APIRouter(tags=["pages"])
 
 
-FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:3000").rstrip("/")
+REPORT_HTML = os.path.join(HERE, "static", "report.html")
 
 
 @pages.get("/")
 @pages.get("/report")
 def report_page():
-    """Redirect legacy HTML UI to the Next.js frontend."""
-    return RedirectResponse(url=FRONTEND_URL, status_code=307)
+    """Serve legacy static HTML UI (same-origin API calls — no Vercel hop)."""
+    return FileResponse(REPORT_HTML, media_type="text/html")
 
 
 @api.post("/transcribe", response_model=TranscribeResponse)

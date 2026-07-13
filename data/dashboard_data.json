@@ -1,7 +1,8 @@
 {
-  "source": "Dashboards All.pdf (SALIC Power BI export) — pages 1-8, Financial Snapshot / Executive Summary, Management View",
+  "source": "Dashboards All.pdf (SALIC Power BI export) — pages 1-8, plus illustrative POC enrichment (income statement, portfolio table, earnings quality, quarterly trend)",
   "as_of": "Dec-2025",
   "currency_unit": "SAR",
+  "periods_available": ["YTD Dec-2025", "LTM Dec-2025", "Q1-Q4 2025 (quarterly_trend)"],
   "kpis": {
     "period": "YTD (period ending Dec-2025)",
     "items": [
@@ -12,6 +13,145 @@
       {"name": "Working Capital", "actual": 1740000000, "budget": 12680000000, "py": 755700000, "py_label": "SMLY", "vs_budget_pct": -86.31, "vs_py_pct": 129.65},
       {"name": "Net Debt to EBITDA", "actual": 2.05, "budget": 13.58, "py": 1.89, "py_label": "SMLY", "unit": "x", "vs_budget_pct": -84.9, "vs_py_pct": 8.5},
       {"name": "ROIC", "actual": 5.98, "unit": "%", "budget": null, "py": null}
+    ]
+  },
+  "income_statement": {
+    "period": "YTD Dec-2025",
+    "unit": "SAR",
+    "note": "Illustrative consolidation — line items reconcile to headline KPIs where marked *",
+    "lines": [
+      {"line": "Revenue", "actual": 7480000000, "budget": 25270000000, "py": 2340000000, "is_total": true},
+      {"line": "Cost of sales", "actual": -6572000000, "budget": -23660000000, "py": -1690500000},
+      {"line": "Gross profit", "actual": 908000000, "budget": 1610000000, "py": 649500000, "is_total": true},
+      {"line": "Operating expenses", "actual": -412000000, "budget": -520000000, "py": -298000000},
+      {"line": "EBITDA", "actual": 1620000000, "budget": 1490000000, "py": 897800000, "is_total": true},
+      {"line": "Depreciation & amortisation", "actual": -285000000, "budget": -310000000, "py": -195000000},
+      {"line": "EBIT", "actual": 1335000000, "budget": 1180000000, "py": 702800000},
+      {"line": "Net finance cost", "actual": -159000000, "budget": -48000000, "py": -92000000},
+      {"line": "Share of associates & JVs", "actual": 246200000, "budget": 85000000, "py": 112000000},
+      {"line": "Profit before tax", "actual": 1422200000, "budget": 1223000000, "py": 722800000},
+      {"line": "Income tax", "actual": -172200000, "budget": -566000000, "py": -159200000},
+      {"line": "Net income", "actual": 1250000000, "budget": 657000000, "py": 563600000, "is_total": true}
+    ]
+  },
+  "portfolio_companies": {
+    "period": "YTD Dec-2025",
+    "unit": "SAR",
+    "note": "Illustrative subsidiary/JV contribution view — revenue recognised on consolidation basis",
+    "items": [
+      {"name": "Olam Agri", "classification": "Associate", "revenue": 2180000000, "gross_profit": -980000000, "ebitda": 142000000, "net_income": 334000000},
+      {"name": "G3GH", "classification": "Subsidiary", "revenue": 4120000000, "gross_profit": 520000000, "ebitda": 385000000, "net_income": 198000000},
+      {"name": "SALIC Ukraine", "classification": "Subsidiary", "revenue": 890000000, "gross_profit": 208000000, "ebitda": 175000000, "net_income": 142000000},
+      {"name": "SABIL", "classification": "Subsidiary", "revenue": 620000000, "gross_profit": 195000000, "ebitda": 168000000, "net_income": 95000000},
+      {"name": "Minerva", "classification": "Associate", "revenue": 540000000, "gross_profit": 118000000, "ebitda": 98000000, "net_income": 132000000},
+      {"name": "UFIC", "classification": "Subsidiary", "revenue": 310000000, "gross_profit": 42000000, "ebitda": 28000000, "net_income": 18000000},
+      {"name": "SALIC Australia", "classification": "Subsidiary", "revenue": 280000000, "gross_profit": 35000000, "ebitda": 22000000, "net_income": 12000000},
+      {"name": "NADEC", "classification": "Associate", "revenue": 1950000000, "gross_profit": 285000000, "ebitda": 312000000, "net_income": 246000000},
+      {"name": "Financial Assets (group)", "classification": "Financial Assets", "revenue": null, "gross_profit": null, "ebitda": 256800000, "net_income": 256800000},
+      {"name": "Group & eliminations", "classification": "Holdings", "revenue": -2880000000, "gross_profit": -92000000, "ebitda": -14800000, "net_income": 1700000}
+    ]
+  },
+  "segment_summary": {
+    "period": "YTD Dec-2025",
+    "unit": "SAR",
+    "items": [
+      {"segment": "Grains", "revenue": 4100000000, "gross_profit": 118000000, "ebitda": -185000000, "net_income": -42000000},
+      {"segment": "Animal Protein", "revenue": 1980000000, "gross_profit": 385000000, "ebitda": 512000000, "net_income": 426600000},
+      {"segment": "Supply Chain", "revenue": 920000000, "gross_profit": 248000000, "ebitda": 343000000, "net_income": 165000000},
+      {"segment": "Trading", "revenue": 380000000, "gross_profit": 62000000, "ebitda": 48000000, "net_income": 5800000},
+      {"segment": "Diversified Products", "revenue": 100000000, "gross_profit": 95000000, "ebitda": 88000000, "net_income": -32800}
+    ]
+  },
+  "geography_summary": {
+    "period": "YTD Dec-2025",
+    "unit": "SAR",
+    "items": [
+      {"geography": "Local (KSA & GCC)", "revenue": 5210000000, "gross_profit": 612000000, "ebitda": 892000000, "net_income": 548000000},
+      {"geography": "International", "revenue": 2270000000, "gross_profit": 296000000, "ebitda": 728000000, "net_income": 702000000}
+    ]
+  },
+  "earnings_quality": {
+    "period": "YTD Dec-2025",
+    "unit": "SAR",
+    "note": "Reported → recurring PAT bridge (illustrative POC data)",
+    "reported_pat": 1250000000,
+    "recurring_pat": 318000000,
+    "non_recurring_total": 932000000,
+    "non_recurring_items": [
+      {"label": "IAS-41 bio-asset fair value gain", "amount": 280000000, "category": "non-cash"},
+      {"label": "BRF one-time dividend income", "amount": 195000000, "category": "one-off"},
+      {"label": "FVTPL mark-to-market", "amount": 62000000, "category": "non-cash"},
+      {"label": "Bargain purchase / acquisition gain", "amount": 185000000, "category": "one-off"},
+      {"label": "FX revaluation & other", "amount": 210000000, "category": "other"}
+    ],
+    "bridge_steps": [
+      {"label": "Reported PAT", "value": 1250000000, "type": "start"},
+      {"label": "IAS-41 bio-asset FV", "value": -280000000, "type": "decrease"},
+      {"label": "BRF one-off dividend", "value": -195000000, "type": "decrease"},
+      {"label": "FVTPL mark-to-market", "value": -62000000, "type": "decrease"},
+      {"label": "Acquisition / bargain gain", "value": -185000000, "type": "decrease"},
+      {"label": "FX & other one-offs", "value": -210000000, "type": "decrease"},
+      {"label": "Recurring engine", "value": 318000000, "type": "end"}
+    ]
+  },
+  "balance_sheet": {
+    "as_of": "Dec-2025",
+    "unit": "SAR",
+    "items": [
+      {"line": "Total assets", "actual": 48200000000, "budget": 52100000000, "py": 39800000000},
+      {"line": "Cash & equivalents", "actual": 4200000000, "budget": 3100000000, "py": 2850000000},
+      {"line": "Total debt", "actual": 7520000000, "budget": 21400000000, "py": 4550000000},
+      {"line": "Net debt", "actual": 3320000000, "budget": 18300000000, "py": 1700000000},
+      {"line": "Total equity", "actual": 28900000000, "budget": 26500000000, "py": 24100000000},
+      {"line": "Working capital", "actual": 1740000000, "budget": 12680000000, "py": 755700000}
+    ]
+  },
+  "quarterly_trend": {
+    "year": 2025,
+    "unit": "SAR",
+    "quarters": ["Q1 2025", "Q2 2025", "Q3 2025", "Q4 2025"],
+    "metrics": {
+      "Revenue": {
+        "actual": [1720000000, 1880000000, 1840000000, 2040000000],
+        "budget": [5800000000, 6400000000, 6550000000, 6470000000],
+        "py": [520000000, 580000000, 610000000, 630000000]
+      },
+      "EBITDA": {
+        "actual": [358000000, 412000000, 398000000, 452000000],
+        "budget": [340000000, 375000000, 385000000, 390000000],
+        "py": [198000000, 218000000, 228000000, 253800000]
+      },
+      "Net Income": {
+        "actual": [278000000, 312000000, 295000000, 365000000],
+        "budget": [148000000, 162000000, 168000000, 179000000],
+        "py": [128000000, 142000000, 148000000, 145600000]
+      },
+      "Gross Profit": {
+        "actual": [205000000, 228000000, 218000000, 257000000],
+        "budget": [380000000, 410000000, 405000000, 415000000],
+        "py": [148000000, 162000000, 168000000, 171500000]
+      }
+    }
+  },
+  "commentary": {
+    "period": "YTD Dec-2025",
+    "wins": [
+      "Net income SAR 1.25bn beat budget by 89.9% and grew 121% YoY, led by Financial Assets and Associates.",
+      "EBITDA SAR 1.62bn is 8.9% above budget despite a 70% revenue miss — margin resilience in Animal Protein and Supply Chain.",
+      "Local geography added SAR 302m to the EBITDA bridge; Net Debt/EBITDA improved to 2.05x vs a 13.58x budget.",
+      "Q4 2025 was the strongest quarter for Revenue and Net Income in the 2025 quarterly trend."
+    ],
+    "risks": [
+      "Revenue SAR 7.48bn is 70.4% below budget — almost entirely Olam Agri and International/Grains.",
+      "Reported PAT quality: ~75% of reported profit is non-recurring (recurring engine ~SAR 318m).",
+      "Working capital SAR 1.74bn is 86.3% below budget — liquidity and funding plans need review.",
+      "Net finance cost ran SAR 111m above budget on higher Islamic financing rates."
+    ],
+    "matters_for_board": [
+      {"issue": "Revenue shortfall concentrated in Olam Agri and International/Grains", "recommendation": "Deep-dive Olam Agri assumptions and international trading strategy; recalibrate FY2026 budget", "owner": "FP&A / Portfolio Mgmt"},
+      {"issue": "Earnings quality — high non-recurring share of reported PAT", "recommendation": "Separate recurring vs reported targets in board KPIs and external disclosure", "owner": "GCFO"},
+      {"issue": "Working capital 86% below budget", "recommendation": "Review portfolio liquidity headroom and WC methodology ahead of FY2026", "owner": "Treasury"},
+      {"issue": "Grains segment dragging GP and EBITDA vs budget", "recommendation": "Assess hedging and cost structure before FY2026 planning", "owner": "Portfolio Mgmt — Grains"}
     ]
   },
   "waterfalls": [

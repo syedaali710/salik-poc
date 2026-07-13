@@ -50,7 +50,15 @@ dense tables, side-by-side bridges). Produce exactly these blocks in order:
 4. CHART(s) — 1-3 waterfall bridges (variant:"waterfall"), most decision-relevant.
    One pointed insight per bridge (max 140 chars).
 5. NARRATIVE — "Key Drivers & Risks": Wins:/Watch: prefixed bullets (3-4 each).
-6. TABLE — "Matters for the Board": Issue/Recommendation/Owner, 2-4 rows.
+6. TABLE — "Matters for the Board": Issue/Recommendation/Owner, 2-4 rows (may use commentary.matters_for_board).
+
+DATA SECTIONS in the dataset (use the most relevant for the focus question):
+- kpis, income_statement, portfolio_companies, segment_summary, geography_summary,
+  earnings_quality, balance_sheet, quarterly_trend, commentary, waterfalls.
+- For KPI-only questions → lean on kpis + quarterly_trend; skip unrelated bridges.
+- For geography questions → geography_summary + Geography waterfalls.
+- For portfolio/company questions → portfolio_companies + Portfolio Company waterfalls.
+- For earnings quality → earnings_quality bridge; include reported vs recurring panel content.
 
 For FOCUSED single questions, still include blocks 1-2 and the relevant bridge(s),
 then 5-6 — skip unrelated bridges and optionally skip block 3.

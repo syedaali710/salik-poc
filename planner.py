@@ -61,6 +61,15 @@ def _api_key():
     return ""
 
 
+def _trim_words(text, limit):
+    """Trim to <= limit chars on a word boundary so insights never cut mid-word."""
+    text = (text or "").strip()
+    if len(text) <= limit:
+        return text
+    cut = text[:limit].rsplit(" ", 1)[0].rstrip(" ,;:-–—")
+    return (cut or text[:limit]) + "…"
+
+
 def _valid_spec(c):
     if not isinstance(c, dict):
         return None
@@ -88,14 +97,19 @@ def _valid_spec(c):
         series = series[:1]
         if len(cats) > 6 or any(v is None or v < 0 for v in series[0]["values"]):
             return None
-    return {
+    spec = {
         "type": ctype,
         "title": str(c.get("title") or "Chart")[:120],
-        "insight": str(c.get("insight") or "")[:140],
+        "insight": _trim_words(str(c.get("insight") or ""), 220),
         "unit": str(c.get("unit") or "")[:20],
         "categories": cats,
         "series": series[:5],
     }
+    # Optional rendering hint: bridge/waterfall charts (start total → deltas →
+    # end total) render as floating up/down bars in pptx_builder.
+    if str(c.get("variant") or "").lower().strip() == "waterfall":
+        spec["variant"] = "waterfall"
+    return spec
 
 
 def plan_charts(text, timeout=30):

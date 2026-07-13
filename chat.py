@@ -315,6 +315,29 @@ class _AnswerDeltaExtractor:
         return out
 
 
+def _anthropic_fail(response=None, exc=None):
+    """Turn an Anthropic HTTP failure into a user-visible chat result."""
+    api_msg = ""
+    if response is not None:
+        try:
+            api_msg = str((response.json().get("error") or {}).get("message") or "")
+        except Exception:
+            api_msg = (response.text or "")[:300]
+    if api_msg:
+        print(f"[chat] API error ({getattr(response, 'status_code', '?')}): {api_msg}")
+    low = api_msg.lower()
+    if "credit balance" in low or "billing" in low or "purchase credits" in low:
+        answer = ("AI is unavailable — the Anthropic API account has insufficient credits. "
+                  "Add credits at console.anthropic.com (Plans & Billing), then try again.")
+    elif api_msg:
+        answer = "Sorry, the AI service returned an error. Please try again in a moment."
+    else:
+        answer = "Sorry, I couldn't reach the AI backend just now. Please try again."
+    if exc and not api_msg:
+        print(f"[chat] request failed: {exc}")
+    return {"answer": answer, "chart": None, "table": None, "ok": False}
+
+
 def answer_question(question, history=None, timeout=60):
     """question + conversation history -> {"answer", "chart", "table", "ok"}."""
     prepared, early = _prepare(question, history)
@@ -339,10 +362,11 @@ def answer_question(question, history=None, timeout=60):
         text = next((b["text"] for b in blocks if b.get("type") == "text"), "")
         if stop == "max_tokens":
             print(f"[chat] response truncated (stop_reason=max_tokens, chars={len(text)})")
+    except requests.HTTPError as e:
+        resp = getattr(e, "response", None)
+        return _anthropic_fail(response=resp, exc=e)
     except Exception as e:
-        print(f"[chat] request failed: {e}")
-        return {"answer": "Sorry, I couldn't reach the AI backend just now. Please try again.",
-                "chart": None, "table": None, "ok": False}
+        return _anthropic_fail(exc=e)
 
     return _finalize_text(text)
 
@@ -374,6 +398,10 @@ def stream_answer_question(question, history=None, timeout=120):
             stream=True,
             timeout=timeout,
         ) as r:
+            if r.status_code != 200:
+                fail = _anthropic_fail(response=r)
+                yield {"type": "done", **fail}
+                return
             r.raise_for_status()
             for raw in r.iter_lines(decode_unicode=True):
                 if not raw:
@@ -409,10 +437,12 @@ def stream_answer_question(question, history=None, timeout=120):
                             "chart": None, "table": None, "ok": False}
                     yield {"type": "done", **fail}
                     return
+    except requests.HTTPError as e:
+        fail = _anthropic_fail(response=getattr(e, "response", None), exc=e)
+        yield {"type": "done", **fail}
+        return
     except Exception as e:
-        print(f"[chat] stream request failed: {e}")
-        fail = {"answer": "Sorry, I couldn't reach the AI backend just now. Please try again.",
-                "chart": None, "table": None, "ok": False}
+        fail = _anthropic_fail(exc=e)
         yield {"type": "done", **fail}
         return
 

@@ -1,4 +1,5 @@
 <!doctype html>
+<!-- RETIRED: UI moved to salic-frontend (Next.js). Backend / and /report redirect to FRONTEND_URL. -->
 <html lang="en">
 <head>
 <meta charset="utf-8"/>
@@ -77,6 +78,16 @@ header.app nav a.active{color:#fff;font-weight:600;text-decoration:underline}
 .mbar .v{font-size:9.5px;color:var(--muted);text-align:center;margin-bottom:2px}
 .mbarwrap{flex:1;display:flex;flex-direction:column;align-items:center}
 .mlabel{font-size:9.5px;color:var(--navy);margin-top:4px;text-align:center;max-width:60px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* ---- KPI cards preview (multi-KPI Actual vs Budget/PY) ---- */
+.kcards{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
+.kcard{flex:1 1 130px;min-width:120px;border:1px solid var(--line);border-top:3px solid var(--navy);border-radius:8px;padding:9px 11px;background:#fff}
+.kcard .klabel{font-size:10.5px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.3px}
+.kcard .kbig{font-size:21px;font-weight:700;color:var(--navy);margin:3px 0 7px;line-height:1.1}
+.kcard .kbig .kunit{font-size:11px;color:var(--muted);font-weight:500}
+.kcard .kdelta{font-size:11px;font-weight:600;line-height:1.6}
+.kcard .kdelta.up{color:var(--green)}
+.kcard .kdelta.down{color:var(--red)}
+.kcard .kref{color:var(--muted);font-weight:500}
 table.minitbl{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:4px}
 table.minitbl th{background:var(--navy);color:#fff;text-align:left;padding:6px 8px;font-size:11.5px}
 table.minitbl td{padding:6px 8px;border-bottom:1px solid var(--line)}
@@ -203,7 +214,46 @@ function fmt(n){
   return (neg?"(":"")+s+(neg?")":"");
 }
 
+function findSeries(spec,...pats){
+  for(const s of (spec.series||[])){
+    const n=(s.name||'').toLowerCase();
+    if(pats.some(p=>n.includes(p))) return s.values||[];
+  }
+  return null;
+}
+function looksLikeKpiCompare(spec){
+  if(!spec.categories||spec.categories.length<2) return false;
+  return !!findSeries(spec,'actual') && !!findSeries(spec,'budget','prior','py','last year','smly');
+}
+function renderKpiCards(spec){
+  const actual=findSeries(spec,'actual');
+  const budget=findSeries(spec,'budget');
+  const py=findSeries(spec,'prior','py','last year','smly');
+  const unit=spec.unit||'';
+  const cardFor=(cat,i)=>{
+    const a=actual&&actual[i]!=null?Number(actual[i]):null;
+    const deltas=[[budget,'Budget'],[py,'PY']].map(([ref,lbl])=>{
+      if(a===null||!ref||ref[i]==null) return '';
+      const b=Number(ref[i]); if(isNaN(b)||b===0) return '';
+      const pct=(a-b)/Math.abs(b)*100; const up=(a-b)>=0;
+      return `<div class="kdelta ${up?'up':'down'}">${up?'▲':'▼'} vs ${lbl} ${Math.abs(pct).toFixed(1)}% <span class="kref">(${fmt(b)})</span></div>`;
+    }).join('');
+    return `<div class="kcard"><div class="klabel">${cat}</div>
+      <div class="kbig">${a===null?'—':fmt(a)}${unit?` <span class="kunit">${unit}</span>`:''}</div>
+      ${deltas}</div>`;
+  };
+  const cards=spec.categories.map(cardFor).join('');
+  const title=spec.title||'';
+  const showUnit=unit && !title.toLowerCase().includes(unit.toLowerCase());
+  return `<div class="miniwrap">
+    <div class="minititle">${title}${showUnit?` (${unit})`:''}</div>
+    ${spec.insight?`<div class="miniinsight">${spec.insight}</div>`:''}
+    <div class="kcards">${cards}</div>
+  </div>`;
+}
+
 function renderMiniChart(spec){
+  if(looksLikeKpiCompare(spec)) return renderKpiCards(spec);
   const vals=[];
   spec.series.forEach(s=>s.values.forEach(v=>{if(v!==null&&v!==undefined)vals.push(Math.abs(v));}));
   const max=Math.max(...vals,1);
@@ -372,16 +422,19 @@ document.getElementById('ask').onclick=ask;
 document.getElementById('q').addEventListener('keydown',e=>{if(e.key==='Enter')ask();});
 
 async function downloadReport(){
-  if(!REPORT.length){ document.getElementById('dlstatus').textContent="Add at least one answer to the report first."; return; }
   const btn=document.getElementById('download');
   btn.disabled=true;
-  document.getElementById('dlstatus').textContent="Building PowerPoint report…";
+  document.getElementById('dlstatus').textContent="Composing a professional board-style report… this can take a moment.";
   try{
+    // Topics the user explored, so the AI report pass can focus the deck.
+    const questions=HISTORY.filter(t=>t.role==='user').map(t=>t.content);
     const r=await fetch('/export_report',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
         company:document.getElementById('f_company').value.trim()||'SALIC',
         period:document.getElementById('f_period').value.trim(),
-        blocks:REPORT
+        blocks:REPORT,
+        generate:true,
+        questions:questions
       })});
     if(!r.ok)throw new Error("server "+r.status);
     const blob=await r.blob();
@@ -405,6 +458,7 @@ const GREETING = "Hi! Ask me about SALIC KPIs, budget, or portfolio performance 
 
 let session = null, starting = null, sessionAlive = false, streamReady = false, speakChain = Promise.resolve();
 let tokenPrefetch = window.__avatarTokenPrefetch || null;
+let keepAliveTimer = null;
 const statusEl = document.getElementById('avatarStatus');
 const canvasEl = document.getElementById('avatarCanvas');
 const canvasCtx = canvasEl.getContext('2d', {willReadFrequently: true});
@@ -529,6 +583,40 @@ function startChromaKeyLoop(video){
   requestAnimationFrame(frame);
 }
 
+function prefetchToken(){
+  tokenPrefetch = fetch('/heygen_token', {method:'POST'}).then(r => r.json()).catch(() => null);
+}
+
+function stopKeepAlive(){
+  if (keepAliveTimer) {
+    clearInterval(keepAliveTimer);
+    keepAliveTimer = null;
+  }
+}
+
+function startKeepAlive(s){
+  stopKeepAlive();
+  keepAliveTimer = setInterval(() => {
+    if (session === s && sessionAlive) {
+      s.keepAlive().catch(() => {});
+    }
+  }, 60_000);
+}
+
+function scheduleReconnect(){
+  prefetchToken();
+  statusEl.textContent = 'Reconnecting avatar…';
+  starting = null;
+  return ensureSession(true).then(() => {
+    if (!statusEl.textContent.includes('Tap') && !statusEl.textContent.includes('unavailable')) {
+      statusEl.textContent = '';
+    }
+  }).catch(e => {
+    console.warn('avatar reconnect failed', e);
+    statusEl.textContent = 'Avatar offline — will retry when you ask';
+  });
+}
+
 async function getSessionToken(){
   let j;
   if (tokenPrefetch) {
@@ -545,6 +633,7 @@ async function getSessionToken(){
 }
 
 function resetSession(){
+  stopKeepAlive();
   sessionAlive = false;
   streamReady = false;
   const old = session;
@@ -590,18 +679,19 @@ async function createSession(){
         else if (!statusEl.textContent.includes('unavailable')) statusEl.textContent = '';
       });
     startChromaKeyLoop(v);
-    playGreetingOnce(s);
   });
   s.on(SessionEvent.SESSION_DISCONNECTED, () => {
-    if (session === s) {
-      session = null;
-      sessionAlive = false;
-      streamReady = false;
-    }
+    if (session !== s) return;
+    session = null;
+    sessionAlive = false;
+    streamReady = false;
+    scheduleReconnect();
   });
   await s.start();
   session = s;
   sessionAlive = true;
+  startKeepAlive(s);
+  playGreetingOnce(s);
   if (streamReady && !statusEl.textContent.includes('Tap')) statusEl.textContent = '';
   return s;
 }
@@ -621,6 +711,7 @@ async function speakText(text, allowRetry = true){
   if (!trimmed) return;
   try {
     const s = await ensureSession();
+    if (!sessionAlive || session !== s) throw new Error('Session is not connected');
     s.repeat(trimmed);
   } catch (e) {
     if (allowRetry && isSessionDeadError(e)) {

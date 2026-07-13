@@ -6,3 +6,14 @@ __pycache__/
 .env
 data/*.pdf
 python-version
+
+# Generated AI report downloads (local output, not source)
+SALIC_AI_Insights_Report*
+SALIC_AI_Insights_Report.pdf
+
+# Client reference decks/PDFs at repo root (template copy lives in assets/)
+SALIC BoD Financial Performance*
+
+# Microsoft Office lock/temp files
+~$*
+

@@ -58,6 +58,11 @@ class ExportReportRequest(BaseModel):
     company: str = "SALIC"
     period: str = ""
     blocks: list[ReportBlock] = Field(default_factory=list)
+    # When true, the backend runs a second LLM pass over the full dataset to
+    # compose a professional board-style deck instead of using `blocks` directly.
+    # `questions` are the topics the user explored, used to focus that report.
+    generate: bool = False
+    questions: list[str] = Field(default_factory=list)
 
 
 class HeygenTokenResponse(BaseModel):

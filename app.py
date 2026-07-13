@@ -13,12 +13,14 @@ import os
 from typing import Any
 
 from fastapi import APIRouter, FastAPI, File, UploadFile
-from fastapi.responses import HTMLResponse, StreamingResponse
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import RedirectResponse, StreamingResponse
 
 from chat import answer_question, stream_answer_question
 from elevenlabs_stt import transcribe_audio_bytes
 from heygen import create_session_token
 from pptx_builder import build_report_pptx
+from report_writer import generate_report
 from schemas import (
     ChatRequest,
     ChatResponse,
@@ -34,15 +36,25 @@ app = FastAPI(
     version="0.1.0",
 )
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[os.environ.get("FRONTEND_URL", "http://localhost:3000")],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 api = APIRouter(tags=["api"])
 pages = APIRouter(tags=["pages"])
 
 
-@pages.get("/", response_class=HTMLResponse)
-@pages.get("/report", response_class=HTMLResponse)
-def report_page() -> HTMLResponse:
-    with open(os.path.join(HERE, "static", "report.html"), encoding="utf-8") as f:
-        return HTMLResponse(f.read(), headers={"Cache-Control": "no-store"})
+FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:3000").rstrip("/")
+
+
+@pages.get("/")
+@pages.get("/report")
+def report_page():
+    """Redirect legacy HTML UI to the Next.js frontend."""
+    return RedirectResponse(url=FRONTEND_URL, status_code=307)
 
 
 @api.post("/transcribe", response_model=TranscribeResponse)
@@ -84,7 +96,7 @@ async def chat_stream(payload: ChatRequest) -> StreamingResponse:
         event_gen(),
         media_type="text/event-stream",
         headers={
-            "Cache-Control": "no-cache",
+            "Cache-Control": "no-cache, no-transform",
             "Connection": "keep-alive",
             "X-Accel-Buffering": "no",
         },
@@ -98,11 +110,28 @@ async def heygen_token() -> dict[str, Any]:
 
 
 @api.post("/export_report")
-async def export_report(payload: ExportReportRequest) -> StreamingResponse:
-    """Accumulated chat blocks → SALIC-template .pptx report download."""
+def export_report(payload: ExportReportRequest) -> StreamingResponse:
+    """SALIC-template .pptx report download.
+
+    When `generate` is set, a second LLM pass composes a professional board-style
+    deck from the full dataset (focused on the user's questions); otherwise the
+    chat-accumulated `blocks` are used. Falls back to `blocks` if generation fails.
+
+    Declared sync (not async) on purpose: the report path makes a blocking LLM
+    call that can take ~30-50s, so FastAPI runs it in a threadpool and keeps the
+    event loop free (an async def here would freeze the server and reset proxies).
+    """
     company = payload.company or "SALIC"
     period = payload.period or ""
     blocks = [b.model_dump(exclude_none=True) for b in payload.blocks]
+
+    if payload.generate:
+        report = generate_report(payload.questions)
+        if report and report.get("blocks"):
+            blocks = report["blocks"]
+            if report.get("period"):
+                period = report["period"]
+
     pptx_buf = build_report_pptx(blocks, company, period)
     fname = f"{company.strip().replace(' ', '_') or 'SALIC'}_AI_Insights_Report.pptx"
     return StreamingResponse(

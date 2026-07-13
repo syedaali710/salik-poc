@@ -18,12 +18,9 @@ uv sync
 uv run uvicorn app:app --host 127.0.0.1 --port 8000
 ```
 
-3. Open **http://localhost:8000**. Click the mic (or type), ask a question, then
-   download the report from the sidebar.
+3. Open **http://localhost:3000** (Next.js frontend). Legacy **http://localhost:8000** redirects to the frontend.
 
-### macOS one-click
-
-Double-click **`START_HERE.command`** (right-click → Open the first time if macOS blocks it).
+For the split frontend repo (`salic-frontend`), run both services — see that repo's README.
 
 ### Environment
 
@@ -32,6 +29,7 @@ Double-click **`START_HERE.command`** (right-click → Open the first time if ma
 | `ANTHROPIC_API_KEY` | Yes (chat) | Claude Q&A |
 | `ELEVENLABS_API_KEY` | Yes (mic) | [ElevenLabs Speech-to-Text](https://elevenlabs.io/docs/eleven-api/guides/cookbooks/speech-to-text) (`scribe_v2`) |
 | `LIVEAVATAR_API_KEY` | Optional | LiveAvatar speech |
+| `FRONTEND_URL` | Yes (split deploy) | Next.js origin for CORS + `/` redirect (default `http://localhost:3000`) |
 | `ELEVENLABS_STT_MODEL` | No | Default `scribe_v2` |
 | `ELEVENLABS_STT_LANGUAGE` | No | ISO language hint (e.g. `eng`); omit for auto-detect |
 | `PORT` | No | Default `8000` |
@@ -46,7 +44,7 @@ Interactive docs: **http://localhost:8000/docs**
 
 | Method | Path | Body | Role |
 |--------|------|------|------|
-| `GET` | `/`, `/report` | — | Serves the chat UI |
+| `GET` | `/`, `/report` | — | Redirect to Next.js frontend (`FRONTEND_URL`) |
 | `POST` | `/transcribe` | `multipart/form-data` (`audio`) | Mic → ElevenLabs STT transcript |
 | `POST` | `/chat` | `{ question, history[] }` | Grounded answer + chart/table (one shot) |
 | `POST` | `/chat/stream` | same | SSE: `delta` text chunks, then `done` with chart/table |
@@ -68,7 +66,7 @@ Pydantic models live in `schemas.py`.
 | `heygen.py` | LiveAvatar session token minting |
 | `pptx_builder.py` | SALIC-template PowerPoint assembly |
 | `planner.py` | Shared chart-spec validation (+ legacy Groq planner) |
-| `static/report.html` | Chat + avatar + report UI |
+| `static/report.html` | **Retired** — reference only; UI is `salic-frontend` |
 | `data/dashboard_data.json` | YTD Dec-2025 Power BI snapshot |
 | `pyproject.toml` / `uv.lock` | Dependencies (uv) |
 
